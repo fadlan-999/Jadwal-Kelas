@@ -5,7 +5,7 @@ st.title("📚 Info Kelas & Jadwal Pelajaran")
 
 # --- DAFTAR NAMA YANG DIBLOKIR TOTAL DARI WEB ---
 # Tulis nama panggilan mereka dengan huruf kecil semua di sini
-daftar_blokir = ["p", "", ""]
+daftar_blokir = ["p"]
 
 # --- GERBANG UTAMA (MINTA NAMA SEBELUM BUKA WEB) ---
 st.subheader("🔒 Verifikasi Pengunjung")
