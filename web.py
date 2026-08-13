@@ -46,7 +46,7 @@ daftar_siswa = [
 
 # --- DAFTAR NAMA YANG DI-BLOKIR (Gunakan huruf kecil semua) ---
 # Contoh: ["budi", "joko"]
-daftar_blokir = [] 
+daftar_blokir = ["FADLAN"] 
 
 # --- GERBANG UTAMA (MENU PILIH NAMA / DROPDOWN) ---
 st.subheader("🔒 Verifikasi Pengunjung")
