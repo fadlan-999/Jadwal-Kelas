@@ -58,7 +58,7 @@ if nama_pengunjung == "Pilih Nama Kamu...":
   st.stop() 
 
 # Cek apakah nama yang dipilih masuk daftar blokir
-kena_blokir = any(b in nama_pengunjung.lower() for b in daftar_blokir)
+kena_blokir = any(b.lower() in nama_pengunjung.lower() for b in daftar_blokir)
 
 if kena_blokir:
   st.error(
