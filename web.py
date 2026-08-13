@@ -128,8 +128,8 @@ def get_password_piket(hari):
 
 
 # --- INISIALISASI STATUS BUKA AKSES PIKET PER HARI ---
- kunci_piket = f"piket_terbuka_{hari}"
- if kunci_piket not in st.session_state:
+kunci_piket = f"piket_terbuka_{hari}"
+if kunci_piket not in st.session_state:
    st.session_state[kunci_piket] = False
 
 # --- FORM TAMBAH PR (TANPA ULANG PASSWORD TERUS-MENERUS) ---
