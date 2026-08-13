@@ -3,6 +3,35 @@ import streamlit as st
 
 st.title("📚 Info Kelas & Jadwal Pelajaran")
 
+# --- DAFTAR NAMA YANG DIBLOKIR TOTAL DARI WEB ---
+# Tulis nama panggilan mereka dengan huruf kecil semua di sini
+daftar_blokir = ["p", "", ""]
+
+# --- GERBANG UTAMA (MINTA NAMA SEBELUM BUKA WEB) ---
+st.subheader("🔒 Verifikasi Pengunjung")
+nama_pengunjung = st.text_input(
+    "Masukkan nama lengkap atau panggilanmu untuk masuk:"
+)
+
+# Jika belum isi nama, web ditahan (tidak menampilkan jadwal & PR)
+if not nama_pengunjung:
+  st.warning("⚠️ Silakan ketik namamu terlebih dahulu untuk membuka website.")
+  st.stop()  # Menghentikan kode agar tidak lanjut ke bawah
+
+# Cek apakah nama pengunjung ada di daftar blokir
+kena_blokir = any(b in nama_pengunjung.lower() for b in daftar_blokir)
+
+if kena_blokir:
+  st.error(
+      f"❌ Maaf {nama_pengunjung}, kamu sedang dalam masa hukuman dan **tidak"
+      " diizinkan** mengakses website ini!"
+  )
+  st.stop()  # Menghentikan web total (mereka tidak bisa lihat apa-apa lagi)
+
+# Jika lolos blokir, web akan terbuka normal di bawah ini:
+st.success(f"Halo, {nama_pengunjung}! Selamat datang di info kelas.")
+st.divider()
+
 # --- BAGIAN JADWAL & PILIH HARI ---
 st.header("📅 Jadwal Pelajaran")
 hari = st.selectbox(
@@ -34,15 +63,10 @@ else:
 
 st.info(isi_pr)
 
-# --- FORM TAMBAH PR DENGAN KEAMANAN PASSWORD ---
+# --- FORM TAMBAH PR DENGAN PASSWORD PIKET ---
 st.subheader(f"Tambah PR untuk Hari {hari} (Khusus Petugas Piket)")
 
-# Daftar nama anak yang diblokir (kalau ada yang nakal, masukkan namanya di sini)
-daftar_blokir = ["Rabu"]
 
-
-# PASSWORD KUAT DARI MASING-MASING PIKET
-# (Ganti teks di dalam tanda kutip dengan password yang diberikan oleh anak piket hari itu)
 def get_password(hari):
   passwords = {
       "Senin": "senin",
@@ -55,37 +79,28 @@ def get_password(hari):
 
 
 with st.form(key=f"form_pr_{hari}"):
-  nama_piket = st.text_input("Nama Petugas Piket:")
   password_piket = st.text_input(
       "Password Khusus Hari Ini:", type="password"
   )
   pr_baru = st.text_area(f"Ketik tugas baru untuk {hari}:")
-
   submit_button = st.form_submit_button(label="Simpan PR")
 
   if submit_button:
-    # 1. Cek apakah nama anak tersebut sedang dihukum
-    if nama_piket.lower() in daftar_blokir:
-      st.error(
-          f"❌ Maaf {nama_piket}, kamu sedang dalam masa hukuman dan tidak"
-          " boleh mengisi PR!"
-      )
-    # 2. Cek password sesuai yang diberikan kelompok piket hari itu
-    elif password_piket != get_password(hari):
+    if password_piket != get_password(hari):
       st.error(
           f"❌ Password salah! Minta password yang benar ke petugas piket hari"
           f" {hari}."
-      )
-    elif not nama_piket or not pr_baru:
-      st.warning("Nama dan tugas wajib diisi!")
+    )
+    elif not pr_baru:
+      st.warning("Tugas wajib diisi!")
     else:
       with open(file_pr, "a") as f:
-        f.write(f"- {pr_baru} (Piket: {nama_piket})\n")
+        f.write(f"- {pr_baru} (Piket: {nama_pengunjung})\n")
       st.success(
-          f"✅ PR untuk hari {hari} berhasil ditambahkan oleh {nama_piket}!"
+          f"✅ PR untuk hari {hari} berhasil ditambahkan oleh {nama_pengunjung}!"
       )
 
-# Tombol hapus PR khusus darurat (kalau ada salah ketik)
+# Tombol hapus PR khusus darurat
 if st.button(f"Hapus Semua PR Hari {hari}"):
   if os.path.exists(file_pr):
     os.remove(file_pr)
