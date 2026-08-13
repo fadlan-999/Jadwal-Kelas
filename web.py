@@ -3,72 +3,94 @@ import streamlit as st
 
 st.title("📚 Info Kelas & Jadwal Pelajaran")
 
-# --- DAFTAR NAMA SISWA SEKELAS (HURUF BESAR SESUAI ABJAD) ---
-daftar_siswa = [
-    "Pilih Nama Kamu...",
-    "AFIQAH",
-    "AISYAH",
-    "ALIF",
-    "ALIFAH",
-    "ALYA",
-    "ANISA",
-    "AZZAM",
-    "AZZIZAH",
-    "CAHAYA",
-    "DYAH",
-    "DZAKKI",
-    "EIJI",
-    "FADLAN",
-    "FAIZ",
-    "FAKHRI",
-    "FARAND",
-    "FATIH",
-    "HABIB",
-    "HAIKAL",
-    "JIBRIL",
-    "KEANDRA",
-    "KEJORA",
-    "KEYLA ELVINA QUEENZA",
-    "MASUD",
-    "NABILA",
-    "NADHIF MUZAKI",
-    "NADHIF RAZA",
-    "NINDITA",
-    "NINDYA",
-    "RAFA BB",
-    "RAIS",
-    "RAKA",
-    "RIFQA",
-    "SHAQUILLA",
-    "SHOFI",
-    "ZILAN",
-]
+# --- DATABASE PASSWORD 36 SISWA (SESUAI ABJAD) ---
+# Kamu bisa mengubah password masing-masing anak di dalam tanda kutip di bawah ini
+password_siswa = {
+    "AFIQAH": "afiqah1",
+    "AISYAH": "aisy2",
+    "ALIF": "alif3",
+    "ALIFAH": "alifah4",
+    "ALYA": "alya5",
+    "ANISA": "anisa6",
+    "AZZAM": "azzam7",
+    "AZZIZAH": "azzizah8",
+    "CAHAYA": "cahaya9",
+    "DYAH": "dyah10",
+    "DZAKKI": "dzakki11",
+    "EIJI": "eiji12",
+    "FADLAN": "fadlan13",
+    "FAIZ": "faiz14",
+    "FAKHRI": "fakhri15",
+    "FARAND": "farand16",
+    "FATIH": "fatih17",
+    "HABIB": "habib18",
+    "HAIKAL": "haikal19",
+    "JIBRIL": "jibril20",
+    "KEANDRA": "keandra21",
+    "KEJORA": "kejora22",
+    "KEYLA": "keyla23",
+    "MASUD": "masud24",
+    "NABILA": "nabila25",
+    "NADHIF MUZAKI": "nadhifm26",
+    "NADHIF RAZA": "nadhifr27",
+    "NINDITA": "nindita28",
+    "NINDYA": "nindya29",
+    "RAFA BB": "rafabb30",
+    "RAIS": "rais31",
+    "RAKA": "raka32",
+    "RIFQA": "rifqa33",
+    "SHAQUILLA": "shaquilla34",
+    "SHOFI": "shofi35",
+    "ZILAN": "zilan36",
+}
 
-# --- DAFTAR NAMA YANG DI-BLOKIR (Gunakan huruf kecil semua) ---
-# Contoh: ["budi", "joko"]
-daftar_blokir = [] 
+# --- DAFTAR NAMA YANG DI-BLOKIR (Huruf kecil) ---
+daftar_blokir = []  # Contoh: ["budi"] jika ada yang dihukum
 
-# --- GERBANG UTAMA (MENU PILIH NAMA / DROPDOWN) ---
-st.subheader("🔒 Verifikasi Pengunjung")
-nama_pengunjung = st.selectbox("Pilih Namamu dari Daftar:", daftar_siswa)
+# --- SISTEM LOGIN / VERIFIKASI AKUN ---
+st.subheader("🔒 Login Siswa")
+nama_pilihan = st.selectbox(
+    "Pilih Namamu:", ["Pilih Nama Kamu..."] + list(password_siswa.keys())
+)
+pw_input = st.text_input("Masukkan Password Pribadimu:", type="password")
 
-# Jika belum memilih nama
-if nama_pengunjung == "Pilih Nama Kamu...":
-  st.warning("⚠️ Silakan pilih namamu terlebih dahulu untuk membuka website.")
-  st.stop() 
+masuk_btn = st.button("Masuk")
 
-# Cek apakah nama yang dipilih masuk daftar blokir
-kena_blokir = any(b.lower() in nama_pengunjung.lower() for b in daftar_blokir)
+# Menyimpan status login agar tidak tereset
+if "sudah_login" not in st.session_state:
+  st.session_state.sudah_login = False
+  st.session_state.user_aktif = ""
 
-if kena_blokir:
-  st.error(
-      f"❌ Maaf {nama_pengunjung}, kamu sedang dalam masa hukuman dan **tidak"
-      " diizinkan** mengakses website ini!"
-  )
-  st.stop() 
+if masuk_btn:
+  if nama_pilihan == "Pilih Nama Kamu...":
+    st.warning("⚠️ Silakan pilih namamu terlebih dahulu!")
+  elif any(b.lower() in nama_pilihan.lower() for b in daftar_blokir):
+    st.error(
+        f"❌ Maaf {nama_pilihan}, akunmu sedang dalam masa hukuman dan tidak"
+        " bisa diakses!"
+    )
+  elif password_siswa.get(nama_pilihan) == pw_input:
+    st.session_state.sudah_login = True
+    st.session_state.user_aktif = nama_pilihan
+    st.success(f"Berhasil masuk sebagai {nama_pilihan}!")
+    st.rerun()
+  else:
+    st.error(
+        "❌ Password salah! Pastikan kamu memasukkan password pribadimu dengan"
+        " benar."
+    )
 
-# Jika lolos verifikasi, web terbuka normal:
-st.success(f"Halo, {nama_pengunjung}! Selamat datang di info kelas.")
+# Jika belum login, tahan halaman di sini
+if not st.session_state.sudah_login:
+  st.stop()
+
+# --- JIKA SUDAH LOGIN, TAMPILKAN HALAMAN UTAMA ---
+st.success(f"Halo, {st.session_state.user_aktif}! Selamat datang di info kelas.")
+if st.button("Keluar / Logout"):
+  st.session_state.sudah_login = False
+  st.session_state.user_aktif = ""
+  st.rerun()
+
 st.divider()
 
 # --- BAGIAN JADWAL & PILIH HARI ---
@@ -102,8 +124,9 @@ else:
 
 st.info(isi_pr)
 
-# --- PASSWORD PIKET BERDASARKAN HARI ---
-def get_password(hari):
+
+# --- PASSWORD PIKET HARIAN ---
+def get_password_piket(hari):
   passwords = {
       "Senin": "1",
       "Selasa": "2",
@@ -113,29 +136,31 @@ def get_password(hari):
   }
   return passwords.get(hari)
 
-# --- FORM TAMBAH PR DENGAN PASSWORD PIKET ---
+
+# --- FORM TAMBAH PR ---
 st.subheader(f"Tambah PR untuk Hari {hari} (Khusus Petugas Piket)")
 
 with st.form(key=f"form_pr_{hari}"):
-  password_piket = st.text_input(
-      "Password Khusus Hari Ini:", type="password"
+  pw_piket_input = st.text_input(
+      "Password Khusus Piket Hari Ini:", type="password"
   )
   pr_baru = st.text_area(f"Ketik tugas baru untuk {hari}:")
   submit_button = st.form_submit_button(label="Simpan PR")
 
   if submit_button:
-    if password_piket != get_password(hari):
+    if pw_piket_input != get_password_piket(hari):
       st.error(
-          f"❌ Password salah! Minta password yang benar ke petugas piket hari"
-          f" {hari}."
+          f"❌ Password piket salah! Minta ke petugas piket hari {hari}."
       )
     elif not pr_baru:
       st.warning("Tugas wajib diisi!")
     else:
       with open(file_pr, "a") as f:
-        f.write(f"- {pr_baru} (Piket: {nama_pengunjung})\n")
+        f.write(
+            f"- {pr_baru} (Diposting oleh: {st.session_state.user_aktif})\n"
+        )
       st.success(
-          f"✅ PR untuk hari {hari} berhasil ditambahkan oleh {nama_pengunjung}!"
+          f"✅ PR berhasil ditambahkan oleh {st.session_state.user_aktif}!"
       )
 
 # Tombol hapus PR khusus darurat
