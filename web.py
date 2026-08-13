@@ -4,7 +4,6 @@ import streamlit as st
 st.title("📚 Info Kelas & Jadwal Pelajaran")
 
 # --- DATABASE PASSWORD 36 SISWA (SESUAI ABJAD) ---
-# Kamu bisa mengubah password masing-masing anak di dalam tanda kutip di bawah ini
 password_siswa = {
     "AFIQAH": "afiqah1",
     "AISYAH": "aisy2",
@@ -45,18 +44,16 @@ password_siswa = {
 }
 
 # --- DAFTAR NAMA YANG DI-BLOKIR (Huruf kecil) ---
-daftar_blokir = []  # Contoh: ["budi"] jika ada yang dihukum
+daftar_blokir = []
 
-# --- SISTEM LOGIN / VERIFIKASI AKUN ---
+# --- SISTEM LOGIN SISWA ---
 st.subheader("🔒 Login Siswa")
 nama_pilihan = st.selectbox(
     "Pilih Namamu:", ["Pilih Nama Kamu..."] + list(password_siswa.keys())
 )
 pw_input = st.text_input("Masukkan Password Pribadimu:", type="password")
-
 masuk_btn = st.button("Masuk")
 
-# Menyimpan status login agar tidak tereset
 if "sudah_login" not in st.session_state:
   st.session_state.sudah_login = False
   st.session_state.user_aktif = ""
@@ -65,26 +62,19 @@ if masuk_btn:
   if nama_pilihan == "Pilih Nama Kamu...":
     st.warning("⚠️ Silakan pilih namamu terlebih dahulu!")
   elif any(b.lower() in nama_pilihan.lower() for b in daftar_blokir):
-    st.error(
-        f"❌ Maaf {nama_pilihan}, akunmu sedang dalam masa hukuman dan tidak"
-        " bisa diakses!"
-    )
+    st.error(f"❌ Maaf {nama_pilihan}, akunmu sedang dalam masa hukuman!")
   elif password_siswa.get(nama_pilihan) == pw_input:
     st.session_state.sudah_login = True
     st.session_state.user_aktif = nama_pilihan
     st.success(f"Berhasil masuk sebagai {nama_pilihan}!")
     st.rerun()
   else:
-    st.error(
-        "❌ Password salah! Pastikan kamu memasukkan password pribadimu dengan"
-        " benar."
-    )
+    st.error("❌ Password salah!")
 
-# Jika belum login, tahan halaman di sini
 if not st.session_state.sudah_login:
   st.stop()
 
-# --- JIKA SUDAH LOGIN, TAMPILKAN HALAMAN UTAMA ---
+# --- HALAMAN UTAMA SETELAH LOGIN ---
 st.success(f"Halo, {st.session_state.user_aktif}! Selamat datang di info kelas.")
 if st.button("Keluar / Logout"):
   st.session_state.sudah_login = False
@@ -93,7 +83,7 @@ if st.button("Keluar / Logout"):
 
 st.divider()
 
-# --- BAGIAN JADWAL & PILIH HARI ---
+# --- JADWAL PELAJARAN ---
 st.header("📅 Jadwal Pelajaran")
 hari = st.selectbox(
     "Pilih Hari:", ["Senin", "Selasa", "Rabu", "Kamis", "Jum'at"]
@@ -112,7 +102,7 @@ elif hari == "Jum'at":
 
 st.divider()
 
-# --- BAGIAN PR BERDASARKAN HARI ---
+# --- CATATAN PR ---
 st.header(f"📝 Catatan PR Hari {hari}")
 file_pr = f"pr_{hari.lower()}.txt"
 
@@ -137,31 +127,53 @@ def get_password_piket(hari):
   return passwords.get(hari)
 
 
-# --- FORM TAMBAH PR ---
+# --- INISIALISASI STATUS BUKA AKSES PIKET PER HARI ---
+ kunci_piket = f"piket_terbuka_{hari}"
+ if kunci_piket not in st.session_state:
+   st.session_state[kunci_piket] = False
+
+# --- FORM TAMBAH PR (TANPA ULANG PASSWORD TERUS-MENERUS) ---
 st.subheader(f"Tambah PR untuk Hari {hari} (Khusus Petugas Piket)")
 
-with st.form(key=f"form_pr_{hari}"):
+if not st.session_state[kunci_piket]:
+  # Jika belum buka akses, minta password sekali saja
   pw_piket_input = st.text_input(
-      "Password Khusus Piket Hari Ini:", type="password"
+      f"Masukkan Password Piket Hari {hari} (Sekali Saja):", type="password"
   )
-  pr_baru = st.text_area(f"Ketik tugas baru untuk {hari}:")
-  submit_button = st.form_submit_button(label="Simpan PR")
-
-  if submit_button:
-    if pw_piket_input != get_password_piket(hari):
-      st.error(
-          f"❌ Password piket salah! Minta ke petugas piket hari {hari}."
-      )
-    elif not pr_baru:
-      st.warning("Tugas wajib diisi!")
+  if st.button("Buka Akses Tambah PR"):
+    if pw_piket_input == get_password_piket(hari):
+      st.session_state[kunci_piket] = True
+      st.success("Akses terbuka! Silakan tambah PR sepuasnya.")
+      st.rerun()
     else:
-      with open(file_pr, "a") as f:
-        f.write(
-            f"- {pr_baru} (Diposting oleh: {st.session_state.user_aktif})\n"
+      st.error("❌ Password piket salah!")
+else:
+  # Jika akses sudah terbuka, tidak perlu masukkan password lagi!
+  st.success(
+      f"🔓 Akses Input PR Hari {hari} Aktif (Piket: {st.session_state.user_aktif})"
+  )
+
+  with st.form(key=f"form_pr_{hari}"):
+    pr_baru = st.text_area(f"Ketik tugas baru untuk {hari}:")
+    submit_button = st.form_submit_button(label="Simpan PR")
+
+    if submit_button:
+      if not pr_baru:
+        st.warning("Tugas wajib diisi!")
+      else:
+        with open(file_pr, "a") as f:
+          f.write(
+              f"- {pr_baru} (Diposting oleh: {st.session_state.user_aktif})\n"
+          )
+        st.success(
+            f"✅ PR berhasil ditambahkan! Kamu bisa langsung mengetik tugas"
+            " berikutnya."
         )
-      st.success(
-          f"✅ PR berhasil ditambahkan oleh {st.session_state.user_aktif}!"
-      )
+
+  # Tombol untuk mengunci kembali akses jika sudah selesai
+  if st.button("Kunci Kembali Akses Piket"):
+    st.session_state[kunci_piket] = False
+    st.rerun()
 
 # Tombol hapus PR khusus darurat
 if st.button(f"Hapus Semua PR Hari {hari}"):
