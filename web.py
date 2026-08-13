@@ -114,66 +114,24 @@ else:
 
 st.info(isi_pr)
 
+# --- FORM TAMBAH PR (TANPA PASSWORD PIKET) ---
+st.subheader(f"Tambah PR untuk Hari {hari}")
 
-# --- PASSWORD PIKET HARIAN ---
-def get_password_piket(hari):
-  passwords = {
-      "Senin": "1",
-      "Selasa": "2",
-      "Rabu": "3",
-      "Kamis": "4",
-      "Jum'at": "5",
-  }
-  return passwords.get(hari)
+with st.form(key=f"form_pr_{hari}"):
+  pr_baru = st.text_area(f"Ketik tugas baru untuk {hari}:")
+  submit_button = st.form_submit_button(label="Simpan PR")
 
-
-# --- INISIALISASI STATUS BUKA AKSES PIKET PER HARI ---
-kunci_piket = f"piket_terbuka_{hari}"
-if kunci_piket not in st.session_state:
-   st.session_state[kunci_piket] = False
-
-# --- FORM TAMBAH PR (TANPA ULANG PASSWORD TERUS-MENERUS) ---
-st.subheader(f"Tambah PR untuk Hari {hari} (Khusus Petugas Piket)")
-
-if not st.session_state[kunci_piket]:
-  # Jika belum buka akses, minta password sekali saja
-  pw_piket_input = st.text_input(
-      f"Masukkan Password Piket Hari {hari} (Sekali Saja):", type="password"
-  )
-  if st.button("Buka Akses Tambah PR"):
-    if pw_piket_input == get_password_piket(hari):
-      st.session_state[kunci_piket] = True
-      st.success("Akses terbuka! Silakan tambah PR sepuasnya.")
-      st.rerun()
+  if submit_button:
+    if not pr_baru:
+      st.warning("Tugas wajib diisi!")
     else:
-      st.error("❌ Password piket salah!")
-else:
-  # Jika akses sudah terbuka, tidak perlu masukkan password lagi!
-  st.success(
-      f"🔓 Akses Input PR Hari {hari} Aktif (Piket: {st.session_state.user_aktif})"
-  )
-
-  with st.form(key=f"form_pr_{hari}"):
-    pr_baru = st.text_area(f"Ketik tugas baru untuk {hari}:")
-    submit_button = st.form_submit_button(label="Simpan PR")
-
-    if submit_button:
-      if not pr_baru:
-        st.warning("Tugas wajib diisi!")
-      else:
-        with open(file_pr, "a") as f:
-          f.write(
-              f"- {pr_baru} (Diposting oleh: {st.session_state.user_aktif})\n"
-          )
-        st.success(
-            f"✅ PR berhasil ditambahkan! Kamu bisa langsung mengetik tugas"
-            " berikutnya."
+      with open(file_pr, "a") as f:
+        f.write(
+            f"- {pr_baru} (Diposting oleh: {st.session_state.user_aktif})\n"
         )
-
-  # Tombol untuk mengunci kembali akses jika sudah selesai
-  if st.button("Kunci Kembali Akses Piket"):
-    st.session_state[kunci_piket] = False
-    st.rerun()
+      st.success(
+          f"✅ PR berhasil ditambahkan oleh {st.session_state.user_aktif}!"
+      )
 
 # Tombol hapus PR khusus darurat
 if st.button(f"Hapus Semua PR Hari {hari}"):
