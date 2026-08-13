@@ -44,7 +44,7 @@ password_siswa = {
 }
 
 # --- DAFTAR NAMA YANG DI-BLOKIR (Huruf kecil) ---
-daftar_blokir = ["fadlan"]
+daftar_blokir = []
 
 # --- SISTEM LOGIN SISWA ---
 st.subheader("🔒 Login Siswa")
