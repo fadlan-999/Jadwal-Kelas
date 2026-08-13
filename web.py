@@ -3,22 +3,61 @@ import streamlit as st
 
 st.title("📚 Info Kelas & Jadwal Pelajaran")
 
-# --- DAFTAR NAMA YANG DIBLOKIR TOTAL DARI WEB ---
-# Tulis nama panggilan mereka dengan huruf kecil semua di sini
-daftar_blokir = ["p"]
+# --- DAFTAR NAMA SISWA SEKELAS (HURUF BESAR SESUAI ABJAD) ---
+daftar_siswa = [
+    "Pilih Nama Kamu...",
+    "AFIQAH",
+    "AISYAH",
+    "ALIF",
+    "ALIFAH",
+    "ALYA",
+    "ANISA",
+    "AZZAM",
+    "AZZIZAH",
+    "CAHAYA",
+    "DYAH",
+    "DZAKKI",
+    "EIJI",
+    "FADLAN",
+    "FAIZ",
+    "FAKHRI",
+    "FARAND",
+    "FATIH",
+    "HABIB",
+    "HAIKAL",
+    "JIBRIL",
+    "KEANDRA",
+    "KEJORA",
+    "KEYLA ELVINA QUEENZA",
+    "MASUD",
+    "NABILA",
+    "NADHIF MUZAKI",
+    "NADHIF RAZA",
+    "NINDITA",
+    "NINDYA",
+    "RAFA BB",
+    "RAIS",
+    "RAKA",
+    "RIFQA",
+    "SHAQUILLA",
+    "SHOFI",
+    "ZILAN",
+]
 
-# --- GERBANG UTAMA (MINTA NAMA SEBELUM BUKA WEB) ---
+# --- DAFTAR NAMA YANG DI-BLOKIR (Gunakan huruf kecil semua) ---
+# Contoh: ["budi", "joko"]
+daftar_blokir = [] 
+
+# --- GERBANG UTAMA (MENU PILIH NAMA / DROPDOWN) ---
 st.subheader("🔒 Verifikasi Pengunjung")
-nama_pengunjung = st.text_input(
-    "Masukkan nama lengkap atau panggilanmu untuk masuk:"
-)
+nama_pengunjung = st.selectbox("Pilih Namamu dari Daftar:", daftar_siswa)
 
-# Jika belum isi nama, web ditahan (tidak menampilkan jadwal & PR)
-if not nama_pengunjung:
-  st.warning("⚠️ Silakan ketik namamu terlebih dahulu untuk membuka website.")
-  st.stop()  # Menghentikan kode agar tidak lanjut ke bawah
+# Jika belum memilih nama
+if nama_pengunjung == "Pilih Nama Kamu...":
+  st.warning("⚠️ Silakan pilih namamu terlebih dahulu untuk membuka website.")
+  st.stop() 
 
-# Cek apakah nama pengunjung ada di daftar blokir
+# Cek apakah nama yang dipilih masuk daftar blokir
 kena_blokir = any(b in nama_pengunjung.lower() for b in daftar_blokir)
 
 if kena_blokir:
@@ -26,9 +65,9 @@ if kena_blokir:
       f"❌ Maaf {nama_pengunjung}, kamu sedang dalam masa hukuman dan **tidak"
       " diizinkan** mengakses website ini!"
   )
-  st.stop()  # Menghentikan web total (mereka tidak bisa lihat apa-apa lagi)
+  st.stop() 
 
-# Jika lolos blokir, web akan terbuka normal di bawah ini:
+# Jika lolos verifikasi, web terbuka normal:
 st.success(f"Halo, {nama_pengunjung}! Selamat datang di info kelas.")
 st.divider()
 
@@ -63,20 +102,19 @@ else:
 
 st.info(isi_pr)
 
-# --- FORM TAMBAH PR DENGAN PASSWORD PIKET ---
-st.subheader(f"Tambah PR untuk Hari {hari} (Khusus Petugas Piket)")
-
-
+# --- PASSWORD PIKET BERDASARKAN HARI ---
 def get_password(hari):
   passwords = {
-      "Senin": "senin",
-      "Selasa": "selasa",
-      "Rabu": "rabu",
-      "Kamis": "kamis",
-      "Jum'at": "jumat",
+      "Senin": "1",
+      "Selasa": "2",
+      "Rabu": "3",
+      "Kamis": "4",
+      "Jum'at": "5",
   }
   return passwords.get(hari)
 
+# --- FORM TAMBAH PR DENGAN PASSWORD PIKET ---
+st.subheader(f"Tambah PR untuk Hari {hari} (Khusus Petugas Piket)")
 
 with st.form(key=f"form_pr_{hari}"):
   password_piket = st.text_input(
@@ -90,7 +128,7 @@ with st.form(key=f"form_pr_{hari}"):
       st.error(
           f"❌ Password salah! Minta password yang benar ke petugas piket hari"
           f" {hari}."
-    )
+      )
     elif not pr_baru:
       st.warning("Tugas wajib diisi!")
     else:
