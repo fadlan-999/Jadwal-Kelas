@@ -38,7 +38,7 @@ st.info(isi_pr)
 st.subheader(f"Tambah PR untuk Hari {hari} (Khusus Petugas Piket)")
 
 # Daftar nama anak yang diblokir (kalau ada yang nakal, masukkan namanya di sini)
-daftar_blokir = [""]
+daftar_blokir = ["Rabu"]
 
 
 # PASSWORD KUAT DARI MASING-MASING PIKET
