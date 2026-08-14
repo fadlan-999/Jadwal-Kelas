@@ -8,8 +8,8 @@ st.title("📚 Info Kelas & Jadwal Pelajaran")
 password_siswa = {
     "AFIQAH": "afiqah1",
     "AISYAH": "aisy2lugege",
-    "ALIF": "alif4cantik",
-    "ALIFAH": "alifah4",
+    "ALIF": "alif3",
+    "ALIFAH": "alifah4cantik",
     "ALYA": "alya5",
     "ANISA": "anisa6",
     "AZZAM": "azzam7",
