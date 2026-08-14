@@ -6,9 +6,9 @@ st.title("📚 Info Kelas & Jadwal Pelajaran")
 # --- DATABASE PASSWORD 36 SISWA (SESUAI ABJAD) ---
 password_siswa = {
     "AFIQAH": "afiqah1",
-    "AISYAH": "aisy2",
+    "AISYAH": "aisyah2sipalingcantik"",
     "ALIF": "alif3",
-    "ALIFAH": "alifah4",
+    "ALIFAH": "alifah4cantik",
     "ALYA": "alya5",
     "ANISA": "anisa6",
     "AZZAM": "azzam7",
