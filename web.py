@@ -1,3 +1,4 @@
+
 import os
 import streamlit as st
 
@@ -6,9 +7,9 @@ st.title("📚 Info Kelas & Jadwal Pelajaran")
 # --- DATABASE PASSWORD 36 SISWA (SESUAI ABJAD) ---
 password_siswa = {
     "AFIQAH": "afiqah1",
-    "AISYAH": "aisyah2sipalingcantik"",
+    "AISYAH": "aisy2",
     "ALIF": "alif3",
-    "ALIFAH": "alifah4cantik",
+    "ALIFAH": "alifah4",
     "ALYA": "alya5",
     "ANISA": "anisa6",
     "AZZAM": "azzam7",
