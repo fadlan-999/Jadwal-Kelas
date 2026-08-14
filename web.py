@@ -1,58 +1,35 @@
-
 import os
 import streamlit as st
 
+# --- SUNTIKAN CSS UNTUK MENYEMBUNYIKAN LOGO GITHUB & MENU ---
+sembunyikan_menu = """
+<style>
+#MainMenu {visibility: hidden;}
+header {visibility: hidden;}
+footer {visibility: hidden;}
+</style>
+"""
+st.markdown(sembunyikan_menu, unsafe_allow_html=True)
+
 st.title("📚 Info Kelas & Jadwal Pelajaran")
 
-# --- DATABASE PASSWORD 36 SISWA (SESUAI ABJAD) ---
-password_siswa = {
-    "AFIQAH": "afiqah1",
-    "AISYAH": "aisy2lugege",
-    "ALIF": "alif3",
-    "ALIFAH": "alifah4cantik",
-    "ALYA": "alya5",
-    "ANISA": "anisa6",
-    "AZZAM": "azzam7",
-    "AZZIZAH": "azzizah8",
-    "CAHAYA": "cahaya9",
-    "DYAH": "dyah10",
-    "DZAKKI": "dzakki11",
-    "EIJI": "eiji16",
-    "FADLAN": "fadlan13",
-    "FAIZ": "faiz14",
-    "FAKHRI": "fakhri15",
-    "FARAND": "farand12",
-    "FATIH": "fatih17",
-    "HABIB": "habib18",
-    "HAIKAL": "haikal19",
-    "JIBRIL": "jibril20",
-    "KEANDRA": "keandra21",
-    "KEJORA": "kejora22",
-    "KEYLA": "keyla23",
-    "MASUD": "masud24",
-    "NABILA": "nabila25",
-    "NADHIF MUZAKI": "nadhifm26",
-    "NADHIF RAZA": "nadhifr27",
-    "NINDITA": "nindita28",
-    "NINDYA": "nindya29",
-    "RAFA BB": "rafabb30",
-    "RAIS": "rais31",
-    "RAKA": "raka32",
-    "RIFQA": "rifqa33",
-    "SHAQUILLA": "cakuila",
-    "SHOFI": "shofi35",
-    "ZILAN": "zilan36",
-}
+# --- DAFTAR NAMA SISWA SEKELAS (TANPA PASSWORD) ---
+daftar_siswa = [
+    "Pilih Nama Kamu...",
+    "AFIQAH", "AISYAH", "ALIF", "ALIFAH", "ALYA", "ANISA", "AZZAM", 
+    "AZZIZAH", "CAHAYA", "DYAH", "DZAKKI", "EIJI", "FADLAN", "FAIZ", 
+    "FAKHRI", "FARAND", "FATIH", "HABIB", "HAIKAL", "JIBRIL", "KEANDRA", 
+    "KEJORA", "KEYLA", "MASUD", "NABILA", "NADHIF MUZAKI", 
+    "NADHIF RAZA", "NINDITA", "NINDYA", "RAFA BB", "RAIS", "RAKA", 
+    "RIFQA", "SHAQUILLA", "SHOFI", "ZILAN"
+]
 
 # --- DAFTAR NAMA YANG DI-BLOKIR (Huruf kecil) ---
 daftar_blokir = []
 
-# --- SISTEM LOGIN SISWA ---
-st.subheader("🔒 Login Siswa")
-nama_pilihan = st.selectbox(
-    "Pilih Namamu:", ["Pilih Nama Kamu..."] + list(password_siswa.keys())
-)
-pw_input = st.text_input("Masukkan Password Pribadimu:", type="password")
+# --- SISTEM LOGIN SISWA (HANYA PILIH NAMA) ---
+st.subheader("🔒 Verifikasi Siswa")
+nama_pilihan = st.selectbox("Pilih Namamu:", daftar_siswa)
 masuk_btn = st.button("Masuk")
 
 if "sudah_login" not in st.session_state:
@@ -64,20 +41,19 @@ if masuk_btn:
     st.warning("⚠️ Silakan pilih namamu terlebih dahulu!")
   elif any(b.lower() in nama_pilihan.lower() for b in daftar_blokir):
     st.error(f"❌ Maaf {nama_pilihan}, akunmu sedang dalam masa hukuman!")
-  elif password_siswa.get(nama_pilihan) == pw_input:
+  else:
     st.session_state.sudah_login = True
     st.session_state.user_aktif = nama_pilihan
     st.success(f"Berhasil masuk sebagai {nama_pilihan}!")
     st.rerun()
-  else:
-    st.error("❌ Password salah!")
 
+# Jika belum login, tahan halaman di sini
 if not st.session_state.sudah_login:
   st.stop()
 
 # --- HALAMAN UTAMA SETELAH LOGIN ---
 st.success(f"Halo, {st.session_state.user_aktif}! Selamat datang di info kelas.")
-if st.button("Keluar / Logout"):
+if st.button("Keluar / Ganti Nama"):
   st.session_state.sudah_login = False
   st.session_state.user_aktif = ""
   st.rerun()
@@ -115,7 +91,7 @@ else:
 
 st.info(isi_pr)
 
-# --- FORM TAMBAH PR (TANPA PASSWORD PIKET) ---
+# --- FORM TAMBAH PR ---
 st.subheader(f"Tambah PR untuk Hari {hari}")
 
 with st.form(key=f"form_pr_{hari}"):
@@ -139,3 +115,4 @@ if st.button(f"Hapus Semua PR Hari {hari}"):
   if os.path.exists(file_pr):
     os.remove(file_pr)
     st.success(f"Semua PR hari {hari} sudah dibersihkan!")
+      
