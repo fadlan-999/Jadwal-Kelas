@@ -25,7 +25,7 @@ daftar_siswa = [
 ]
 
 # --- DAFTAR NAMA YANG DI-BLOKIR (Huruf kecil) ---
-daftar_blokir = [""]
+daftar_blokir = []
 
 # --- SISTEM LOGIN SISWA (HANYA PILIH NAMA) ---
 st.subheader("🔒 Verifikasi Siswa")
