@@ -118,7 +118,7 @@ if st.button(f"Hapus Semua PR Hari {hari}"):
 # --- FITUR BARU: ASISTEN AI KELAS (GROQ) ---
 # ==========================================
 st.divider()
-st.title("⚡ Asisten AI Kelas (Llama 3)")
+st.title("⚡ Asisten AI Kelas (Llama 3.1)")
 st.write("Bot ini anti-lag dan sudah membaca seluruh catatan PR kelas kita. Tanya apa saja!")
 
 try:
@@ -147,7 +147,6 @@ try:
     # 4. Menampilkan riwayat chat di layar (kecuali pesan sistem)
     for message in st.session_state.groq_chat:
         if message["role"] != "system":
-            # Groq memakai role "assistant", bukan "model" seperti Gemini
             with st.chat_message(message["role"]):
                 st.markdown(message["content"])
 
@@ -155,29 +154,26 @@ try:
     pertanyaan_user = st.chat_input("Tanya soal PR atau materi sekolah di sini...")
 
     if pertanyaan_user:
-        # Tampilkan chat user
         with st.chat_message("user"):
             st.markdown(pertanyaan_user)
         
-        # Simpan ke memori sementara
         st.session_state.groq_chat.append({"role": "user", "content": pertanyaan_user})
         
-       # Panggil mesin Llama 3 dari Groq
-with st.chat_message("assistant"):
-    respon = client.chat.completions.create(
-        model="llama-3.1-8b-instant", # Mesin generasi terbaru
-        messages=st.session_state.groq_chat,
-        temperature=0.7
-    )
+        with st.chat_message("assistant"):
+            respon = client.chat.completions.create(
+                model="llama-3.1-8b-instant", # <-- MESIN TERBARU SUDAH DIPASANG DI SINI
+                messages=st.session_state.groq_chat,
+                temperature=0.7
+            )
             jawaban_ai = respon.choices[0].message.content
             st.markdown(jawaban_ai)
             
-        # Simpan balasan AI ke memori
         st.session_state.groq_chat.append({"role": "assistant", "content": jawaban_ai})
 
+# <-- INI BAGIAN EXCEPT YANG SEMPAT HILANG TADI -->
 except KeyError:
     st.error("⚠️ Ups! API Key Groq belum dipasang di 'Secrets' Streamlit.")
 except ImportError:
-    st.error("⚠️ Sistem sedang mengunduh mesin Groq. Tunggu sebentar sampai Streamlit selesai me-refresh aplikasi (pastikan file requirements.txt sudah di-update).")
+    st.error("⚠️ Sistem sedang mengunduh mesin Groq. Tunggu sebentar sampai Streamlit selesai me-refresh aplikasi.")
 except Exception as e:
     st.error(f"❌ Terjadi kesalahan pada AI: {e}")
