@@ -162,13 +162,13 @@ try:
         # Simpan ke memori sementara
         st.session_state.groq_chat.append({"role": "user", "content": pertanyaan_user})
         
-        # Panggil mesin Llama 3 dari Groq
-        with st.chat_message("assistant"):
-            respon = client.chat.completions.create(
-                model="llama3-8b-8192", # Mesin tercepat dan paling stabil
-                messages=st.session_state.groq_chat,
-                temperature=0.7
-            )
+       # Panggil mesin Llama 3 dari Groq
+with st.chat_message("assistant"):
+    respon = client.chat.completions.create(
+        model="llama-3.1-8b-instant", # Mesin generasi terbaru
+        messages=st.session_state.groq_chat,
+        temperature=0.7
+    )
             jawaban_ai = respon.choices[0].message.content
             st.markdown(jawaban_ai)
             
