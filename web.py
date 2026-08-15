@@ -117,40 +117,48 @@ if st.button(f"Hapus Semua PR Hari {hari}"):
     st.success(f"Semua PR hari {hari} sudah dibersihkan!")
 
 
+
 # ==========================================
 # --- FITUR BARU: ASISTEN AI CHATBOT ---
 # ==========================================
 st.divider()
 st.title("🤖 Asisten AI Kelas")
-st.write("Silakan tanya apa saja ke bot ini!")
+st.write("Silakan tanya apa saja ke bot ini (Tugas, coding, cerita, dll)!")
 
-# 1. Menyiapkan memori untuk menyimpan riwayat obrolan
-if "riwayat_chat" not in st.session_state:
-    st.session_state.riwayat_chat = []
+try:
+    import google.generativeai as genai
+    
+    # 1. Mengambil kunci rahasia dari brankas Streamlit
+    genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+    
+    # 2. Menyiapkan model otak AI (Gemini 1.5 Flash yang super cepat)
+    model = genai.GenerativeModel('gemini-1.5-flash')
 
-# 2. Menampilkan obrolan yang sudah ada di memori
-for chat in st.session_state.riwayat_chat:
-    with st.chat_message(chat["peran"]):
-        st.markdown(chat["pesan"])
+    # 3. Membuat memori obrolan agar AI ingat pertanyaan sebelumnya
+    if "chat_session" not in st.session_state:
+        st.session_state.chat_session = model.start_chat(history=[])
 
-# 3. Kolom untuk mengetik pesan di bagian bawah layar
-pertanyaan_user = st.chat_input("Ketik pertanyaanmu di sini...")
+    # 4. Menampilkan riwayat chat di layar
+    for message in st.session_state.chat_session.history:
+        peran = "assistant" if message.role == "model" else "user"
+        with st.chat_message(peran):
+            st.markdown(message.parts[0].text)
 
-if pertanyaan_user:
-    # Tampilkan chat dari user di layar
-    with st.chat_message("user"):
-        st.markdown(pertanyaan_user)
-    # Simpan ke memori
-    st.session_state.riwayat_chat.append({"peran": "user", "pesan": pertanyaan_user})
+    # 5. Kolom tempat kamu mengetik
+    pertanyaan_user = st.chat_input("Ketik pertanyaanmu di sini...")
 
-    # --- Di sinilah nanti kita akan memanggil "Otak AI" sungguhan ---
-    # Untuk sementara, bot hanya akan membeo
-    jawaban_ai = f"Halo! Aku asisten AI kelas. Kamu tadi bilang: '{pertanyaan_user}'. Saat ini otak AI-ku sedang dirakit!"
-    # -----------------------------------------------------------------
+    if pertanyaan_user:
+        # Tampilkan apa yang diketik user
+        with st.chat_message("user"):
+            st.markdown(pertanyaan_user)
+        
+        # Suruh AI berpikir dan tampilkan jawabannya
+        with st.chat_message("assistant"):
+            jawaban = st.session_state.chat_session.send_message(pertanyaan_user)
+            st.markdown(jawaban.text)
 
-    # Tampilkan balasan AI di layar
-    with st.chat_message("assistant"):
-        st.markdown(jawaban_ai)
-    # Simpan ke memori
-    st.session_state.riwayat_chat.append({"peran": "assistant", "pesan": jawaban_ai})
+except KeyError:
+    st.error("⚠️ Ups! API Key belum dipasang di bagian 'Secrets' pada pengaturan Streamlit.")
+except Exception as e:
+    st.error(f"❌ Terjadi kesalahan pada AI: {e}")
       
