@@ -132,7 +132,7 @@ try:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
     
     # 2. Menyiapkan model otak AI (Gemini 1.5 Flash yang super cepat)
-    model = genai.GenerativeModel('gemini-1.5-flash')
+    model = genai.GenerativeModel('gemini-pro')
 
     # 3. Membuat memori obrolan agar AI ingat pertanyaan sebelumnya
     if "chat_session" not in st.session_state:
