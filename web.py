@@ -131,43 +131,43 @@ try:
     # 1. Mengambil kunci rahasia dari brankas Streamlit
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
     
-    # 2. RADAR PINTAR: Melacak nama model yang tersedia otomatis
-    model_tersedia = [
-        m.name for m in genai.list_models() 
-        if 'generateContent' in m.supported_generation_methods
-    ]
+    # 2. RADAR PINTAR: Melacak SEMUA model yang tersedia
+    daftar_model = []
+    for m in genai.list_models():
+        if 'generateContent' in m.supported_generation_methods:
+            daftar_model.append(m.name.replace("models/", ""))
     
-    if not model_tersedia:
+    if not daftar_model:
         st.error("⚠️ API Key kamu valid, tapi tidak memiliki akses ke model AI apa pun.")
         st.stop()
 
-    # Ambil model pertama yang berhasil dilacak (misal: "models/gemini-1.5-flash")
-    # Lalu buang tulisan "models/" agar namanya bisa dipakai oleh sistem
-    nama_otak_ai = model_tersedia[0].replace("models/", "")
-    st.caption(f"*(Sistem otomatis terhubung ke mesin: {nama_otak_ai})*")
+    # 3. Membuat menu Dropdown agar kamu bisa memilih mesin AI sendiri
+    pilihan_mesin = st.selectbox(
+        "⚙️ Pilih Mesin AI (Coba pilih versi yang paling baru/tinggi):", 
+        daftar_model
+    )
+    
+    # 4. Menyiapkan model otak AI sesuai pilihanmu
+    model = genai.GenerativeModel(pilihan_mesin)
 
-    # 3. Menyiapkan model otak AI yang sudah terlacak
-    model = genai.GenerativeModel(nama_otak_ai)
-
-    # 4. Membuat memori obrolan agar AI ingat pertanyaan sebelumnya
-    if "chat_session" not in st.session_state:
+    # 5. Membuat memori obrolan (Reset otomatis jika kamu mengganti mesin)
+    if "chat_session" not in st.session_state or st.session_state.get("mesin_aktif") != pilihan_mesin:
         st.session_state.chat_session = model.start_chat(history=[])
+        st.session_state.mesin_aktif = pilihan_mesin
 
-    # 5. Menampilkan riwayat chat di layar
+    # 6. Menampilkan riwayat chat di layar
     for message in st.session_state.chat_session.history:
         peran = "assistant" if message.role == "model" else "user"
         with st.chat_message(peran):
             st.markdown(message.parts[0].text)
 
-    # 6. Kolom tempat kamu mengetik
+    # 7. Kolom tempat kamu mengetik
     pertanyaan_user = st.chat_input("Ketik pertanyaanmu di sini...")
 
     if pertanyaan_user:
-        # Tampilkan apa yang diketik user
         with st.chat_message("user"):
             st.markdown(pertanyaan_user)
         
-        # Suruh AI berpikir dan tampilkan jawabannya
         with st.chat_message("assistant"):
             jawaban = st.session_state.chat_session.send_message(pertanyaan_user)
             st.markdown(jawaban.text)
