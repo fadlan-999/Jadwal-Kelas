@@ -13,7 +13,7 @@ st.markdown(sembunyikan_menu, unsafe_allow_html=True)
 
 st.title("📚 Info Kelas & Jadwal Pelajaran")
 
-# --- DAFTAR NAMA SISWA SEKELAS (TANPA PASSWORD) ---
+# --- DAFTAR NAMA SISWA SEKELAS ---
 daftar_siswa = [
     "Pilih Nama Kamu...",
     "AFIQAH", "AISYAH", "ALIF", "ALIFAH", "ALYA", "ANISA", "AZZAM", 
@@ -24,10 +24,9 @@ daftar_siswa = [
     "RIFQA", "SHAQUILLA", "SHOFI", "ZILAN"
 ]
 
-# --- DAFTAR NAMA YANG DI-BLOKIR (Huruf kecil) ---
 daftar_blokir = []
 
-# --- SISTEM LOGIN SISWA (HANYA PILIH NAMA) ---
+# --- SISTEM LOGIN SISWA ---
 st.subheader("🔒 Verifikasi Siswa")
 nama_pilihan = st.selectbox("Pilih Namamu:", daftar_siswa)
 masuk_btn = st.button("Masuk")
@@ -47,7 +46,6 @@ if masuk_btn:
     st.success(f"Berhasil masuk sebagai {nama_pilihan}!")
     st.rerun()
 
-# Jika belum login, tahan halaman di sini
 if not st.session_state.sudah_login:
   st.stop()
 
@@ -110,38 +108,27 @@ with st.form(key=f"form_pr_{hari}"):
           f"✅ PR berhasil ditambahkan oleh {st.session_state.user_aktif}!"
       )
 
-# Tombol hapus PR khusus darurat
 if st.button(f"Hapus Semua PR Hari {hari}"):
   if os.path.exists(file_pr):
     os.remove(file_pr)
     st.success(f"Semua PR hari {hari} sudah dibersihkan!")
 
 
-
 # ==========================================
-# --- FITUR BARU: ASISTEN AI KELAS SUPER ---
+# --- FITUR BARU: ASISTEN AI KELAS (GROQ) ---
 # ==========================================
 st.divider()
-st.title("🤖 Asisten AI Kelas")
-st.write("Tanya apa saja! Bot ini sudah hafal semua PR dan jadwal kelas kita.")
+st.title("⚡ Asisten AI Kelas (Llama 3)")
+st.write("Bot ini anti-lag dan sudah membaca seluruh catatan PR kelas kita. Tanya apa saja!")
 
 try:
-    import google.generativeai as genai
-    genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+    from groq import Groq
     
-    daftar_model = [m.name.replace("models/", "") for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
-    
-    if not daftar_model:
-        st.error("⚠️ API Key tidak memiliki akses model.")
-        st.stop()
+    # 1. Menghubungkan Kunci API Groq
+    client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 
-    pilihan_mesin = st.selectbox("⚙️ Pilih Mesin AI:", daftar_model)
-    model = genai.GenerativeModel(pilihan_mesin)
-
-    # ---------------------------------------------------------
-    # MENGUMPULKAN DATA KELAS SECARA DIAM-DIAM UNTUK OTAK AI
-    # ---------------------------------------------------------
-    ingatan_kelas = "Kamu adalah asisten AI ramah khusus untuk kelasku. Berikut adalah data PR kelas saat ini:\n"
+    # 2. Mengumpulkan Data PR secara diam-diam
+    ingatan_kelas = "Kamu adalah asisten AI ramah khusus untuk kelasku. Gunakan bahasa Indonesia yang santai tapi sopan. Berikut adalah data PR kelas saat ini yang harus kamu jadikan acuan menjawab:\n"
     for hari_cek in ["senin", "selasa", "rabu", "kamis", "jum'at"]:
         file_cek = f"pr_{hari_cek}.txt"
         if os.path.exists(file_cek):
@@ -149,34 +136,48 @@ try:
                 ingatan_kelas += f"- Hari {hari_cek.capitalize()}: {f.read()}\n"
         else:
             ingatan_kelas += f"- Hari {hari_cek.capitalize()}: Tidak ada PR.\n"
-    # ---------------------------------------------------------
 
-    if "chat_session" not in st.session_state or st.session_state.get("mesin_aktif") != pilihan_mesin:
-        # Kita masukkan data PR rahasia ke dalam sistem memori awalnya
-        st.session_state.chat_session = model.start_chat(history=[
-            {"role": "user", "parts": [ingatan_kelas]},
-            {"role": "model", "parts": ["Siap! Saya sudah menghafal semua jadwal dan PR kelas. Ada yang bisa saya bantu?"]}
-        ])
-        st.session_state.mesin_aktif = pilihan_mesin
+    # 3. Menyiapkan memori obrolan Groq
+    if "groq_chat" not in st.session_state:
+        # Pesan tipe "system" adalah instruksi rahasia yang tidak muncul di layar
+        st.session_state.groq_chat = [
+            {"role": "system", "content": ingatan_kelas}
+        ]
 
-    # Menampilkan riwayat chat (kecuali instruksi rahasia di awal)
-    for i, message in enumerate(st.session_state.chat_session.history):
-        if i >= 2: # Sembunyikan 2 pesan pertama (data PR rahasia) dari layar
-            peran = "assistant" if message.role == "model" else "user"
-            with st.chat_message(peran):
-                st.markdown(message.parts[0].text)
+    # 4. Menampilkan riwayat chat di layar (kecuali pesan sistem)
+    for message in st.session_state.groq_chat:
+        if message["role"] != "system":
+            # Groq memakai role "assistant", bukan "model" seperti Gemini
+            with st.chat_message(message["role"]):
+                st.markdown(message["content"])
 
-    pertanyaan_user = st.chat_input("Tanya soal PR atau yang lainnya di sini...")
+    # 5. Kolom input user
+    pertanyaan_user = st.chat_input("Tanya soal PR atau materi sekolah di sini...")
 
     if pertanyaan_user:
+        # Tampilkan chat user
         with st.chat_message("user"):
             st.markdown(pertanyaan_user)
         
+        # Simpan ke memori sementara
+        st.session_state.groq_chat.append({"role": "user", "content": pertanyaan_user})
+        
+        # Panggil mesin Llama 3 dari Groq
         with st.chat_message("assistant"):
-            jawaban = st.session_state.chat_session.send_message(pertanyaan_user)
-            st.markdown(jawaban.text)
+            respon = client.chat.completions.create(
+                model="llama3-8b-8192", # Mesin tercepat dan paling stabil
+                messages=st.session_state.groq_chat,
+                temperature=0.7
+            )
+            jawaban_ai = respon.choices[0].message.content
+            st.markdown(jawaban_ai)
+            
+        # Simpan balasan AI ke memori
+        st.session_state.groq_chat.append({"role": "assistant", "content": jawaban_ai})
 
 except KeyError:
-    st.error("⚠️ Ups! API Key belum dipasang di 'Secrets'.")
+    st.error("⚠️ Ups! API Key Groq belum dipasang di 'Secrets' Streamlit.")
+except ImportError:
+    st.error("⚠️ Sistem sedang mengunduh mesin Groq. Tunggu sebentar sampai Streamlit selesai me-refresh aplikasi (pastikan file requirements.txt sudah di-update).")
 except Exception as e:
-    st.error(f"❌ Tunggu sekitar 1 menit dan coba lagi. (Pesan sistem: {e})")
+    st.error(f"❌ Terjadi kesalahan pada AI: {e}")
