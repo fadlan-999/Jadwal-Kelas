@@ -115,19 +115,31 @@ if st.button(f"Hapus Semua PR Hari {hari}"):
 
 
 # ==========================================
-# --- FITUR BARU: ASISTEN AI KELAS (GROQ) ---
+# --- FITUR BARU: ASISTEN AI KELAS (GROQ 3 KUNCI) ---
 # ==========================================
 st.divider()
-st.title("⚡ Asisten AI Kelas (Llama 3.1)")
-st.write("Bot ini anti-lag dan sudah membaca seluruh catatan PR kelas kita. Tanya apa saja!")
+st.title("⚡ Asisten AI Kelas (Llama 3.1 Pro)")
+st.write("Bot ini ditenagai oleh sistem rotasi 3 mesin, dijamin anti-lag! Tanya apa saja.")
 
 try:
     from groq import Groq
     
-    # 1. Menghubungkan Kunci API Groq
-    client = Groq(api_key=st.secrets["GROQ_API_KEY"])
+    # 1. Menarik 3 Kunci API dari Brankas
+    kumpulan_kunci = [
+        st.secrets["GROQ_API_KEY_1"],
+        st.secrets["GROQ_API_KEY_2"],
+        st.secrets["GROQ_API_KEY_3"]
+    ]
 
-    # 2. Mengumpulkan Data PR secara diam-diam
+    # 2. Sistem Pelacak Giliran Kunci
+    if "giliran_kunci" not in st.session_state:
+        st.session_state.giliran_kunci = 0
+
+    # Mengaktifkan kunci sesuai gilirannya
+    kunci_aktif = kumpulan_kunci[st.session_state.giliran_kunci]
+    client = Groq(api_key=kunci_aktif)
+
+    # 3. Mengumpulkan Data PR secara diam-diam
     ingatan_kelas = "Kamu adalah asisten AI ramah khusus untuk kelasku. Gunakan bahasa Indonesia yang santai tapi sopan. Berikut adalah data PR kelas saat ini yang harus kamu jadikan acuan menjawab:\n"
     for hari_cek in ["senin", "selasa", "rabu", "kamis", "jum'at"]:
         file_cek = f"pr_{hari_cek}.txt"
@@ -137,20 +149,19 @@ try:
         else:
             ingatan_kelas += f"- Hari {hari_cek.capitalize()}: Tidak ada PR.\n"
 
-    # 3. Menyiapkan memori obrolan Groq
+    # 4. Menyiapkan memori obrolan
     if "groq_chat" not in st.session_state:
-        # Pesan tipe "system" adalah instruksi rahasia yang tidak muncul di layar
         st.session_state.groq_chat = [
             {"role": "system", "content": ingatan_kelas}
         ]
 
-    # 4. Menampilkan riwayat chat di layar (kecuali pesan sistem)
+    # 5. Menampilkan riwayat chat di layar
     for message in st.session_state.groq_chat:
         if message["role"] != "system":
             with st.chat_message(message["role"]):
                 st.markdown(message["content"])
 
-    # 5. Kolom input user
+    # 6. Kolom input user
     pertanyaan_user = st.chat_input("Tanya soal PR atau materi sekolah di sini...")
 
     if pertanyaan_user:
@@ -159,9 +170,10 @@ try:
         
         st.session_state.groq_chat.append({"role": "user", "content": pertanyaan_user})
         
+        # Panggil AI menggunakan kunci yang sedang aktif
         with st.chat_message("assistant"):
             respon = client.chat.completions.create(
-                model="llama-3.1-8b-instant", # <-- MESIN TERBARU SUDAH DIPASANG DI SINI
+                model="llama-3.1-8b-instant",
                 messages=st.session_state.groq_chat,
                 temperature=0.7
             )
@@ -169,10 +181,14 @@ try:
             st.markdown(jawaban_ai)
             
         st.session_state.groq_chat.append({"role": "assistant", "content": jawaban_ai})
+        
+        # --- SISTEM ROTASI KUNCI OTOMATIS ---
+        # Setelah berhasil menjawab, pindahkan giliran ke kunci berikutnya
+        # Logika: 0 -> 1 -> 2 -> 0 -> 1 -> dst.
+        st.session_state.giliran_kunci = (st.session_state.giliran_kunci + 1) % 3
 
-# <-- INI BAGIAN EXCEPT YANG SEMPAT HILANG TADI -->
 except KeyError:
-    st.error("⚠️ Ups! API Key Groq belum dipasang di 'Secrets' Streamlit.")
+    st.error("⚠️ Ups! Pastikan kamu sudah menulis GROQ_API_KEY_1, 2, dan 3 di 'Secrets' Streamlit dengan benar.")
 except ImportError:
     st.error("⚠️ Sistem sedang mengunduh mesin Groq. Tunggu sebentar sampai Streamlit selesai me-refresh aplikasi.")
 except Exception as e:
