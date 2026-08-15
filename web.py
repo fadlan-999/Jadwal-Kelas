@@ -131,20 +131,35 @@ try:
     # 1. Mengambil kunci rahasia dari brankas Streamlit
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
     
-    # 2. Menyiapkan model otak AI (Gemini 1.5 Flash yang super cepat)
-    model = genai.GenerativeModel('gemini-pro')
+    # 2. RADAR PINTAR: Melacak nama model yang tersedia otomatis
+    model_tersedia = [
+        m.name for m in genai.list_models() 
+        if 'generateContent' in m.supported_generation_methods
+    ]
+    
+    if not model_tersedia:
+        st.error("⚠️ API Key kamu valid, tapi tidak memiliki akses ke model AI apa pun.")
+        st.stop()
 
-    # 3. Membuat memori obrolan agar AI ingat pertanyaan sebelumnya
+    # Ambil model pertama yang berhasil dilacak (misal: "models/gemini-1.5-flash")
+    # Lalu buang tulisan "models/" agar namanya bisa dipakai oleh sistem
+    nama_otak_ai = model_tersedia[0].replace("models/", "")
+    st.caption(f"*(Sistem otomatis terhubung ke mesin: {nama_otak_ai})*")
+
+    # 3. Menyiapkan model otak AI yang sudah terlacak
+    model = genai.GenerativeModel(nama_otak_ai)
+
+    # 4. Membuat memori obrolan agar AI ingat pertanyaan sebelumnya
     if "chat_session" not in st.session_state:
         st.session_state.chat_session = model.start_chat(history=[])
 
-    # 4. Menampilkan riwayat chat di layar
+    # 5. Menampilkan riwayat chat di layar
     for message in st.session_state.chat_session.history:
         peran = "assistant" if message.role == "model" else "user"
         with st.chat_message(peran):
             st.markdown(message.parts[0].text)
 
-    # 5. Kolom tempat kamu mengetik
+    # 6. Kolom tempat kamu mengetik
     pertanyaan_user = st.chat_input("Ketik pertanyaanmu di sini...")
 
     if pertanyaan_user:
@@ -161,4 +176,3 @@ except KeyError:
     st.error("⚠️ Ups! API Key belum dipasang di bagian 'Secrets' pada pengaturan Streamlit.")
 except Exception as e:
     st.error(f"❌ Terjadi kesalahan pada AI: {e}")
-      
