@@ -115,4 +115,42 @@ if st.button(f"Hapus Semua PR Hari {hari}"):
   if os.path.exists(file_pr):
     os.remove(file_pr)
     st.success(f"Semua PR hari {hari} sudah dibersihkan!")
+
+
+# ==========================================
+# --- FITUR BARU: ASISTEN AI CHATBOT ---
+# ==========================================
+st.divider()
+st.title("🤖 Asisten AI Kelas")
+st.write("Silakan tanya apa saja ke bot ini!")
+
+# 1. Menyiapkan memori untuk menyimpan riwayat obrolan
+if "riwayat_chat" not in st.session_state:
+    st.session_state.riwayat_chat = []
+
+# 2. Menampilkan obrolan yang sudah ada di memori
+for chat in st.session_state.riwayat_chat:
+    with st.chat_message(chat["peran"]):
+        st.markdown(chat["pesan"])
+
+# 3. Kolom untuk mengetik pesan di bagian bawah layar
+pertanyaan_user = st.chat_input("Ketik pertanyaanmu di sini...")
+
+if pertanyaan_user:
+    # Tampilkan chat dari user di layar
+    with st.chat_message("user"):
+        st.markdown(pertanyaan_user)
+    # Simpan ke memori
+    st.session_state.riwayat_chat.append({"peran": "user", "pesan": pertanyaan_user})
+
+    # --- Di sinilah nanti kita akan memanggil "Otak AI" sungguhan ---
+    # Untuk sementara, bot hanya akan membeo
+    jawaban_ai = f"Halo! Aku asisten AI kelas. Kamu tadi bilang: '{pertanyaan_user}'. Saat ini otak AI-ku sedang dirakit!"
+    # -----------------------------------------------------------------
+
+    # Tampilkan balasan AI di layar
+    with st.chat_message("assistant"):
+        st.markdown(jawaban_ai)
+    # Simpan ke memori
+    st.session_state.riwayat_chat.append({"peran": "assistant", "pesan": jawaban_ai})
       
