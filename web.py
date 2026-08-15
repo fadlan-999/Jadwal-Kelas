@@ -119,50 +119,54 @@ if st.button(f"Hapus Semua PR Hari {hari}"):
 
 
 # ==========================================
-# --- FITUR BARU: ASISTEN AI CHATBOT ---
+# --- FITUR BARU: ASISTEN AI KELAS SUPER ---
 # ==========================================
 st.divider()
 st.title("🤖 Asisten AI Kelas")
-st.write("Silakan tanya apa saja ke bot ini (Tugas, coding, cerita, dll)!")
+st.write("Tanya apa saja! Bot ini sudah hafal semua PR dan jadwal kelas kita.")
 
 try:
     import google.generativeai as genai
-    
-    # 1. Mengambil kunci rahasia dari brankas Streamlit
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
     
-    # 2. RADAR PINTAR: Melacak SEMUA model yang tersedia
-    daftar_model = []
-    for m in genai.list_models():
-        if 'generateContent' in m.supported_generation_methods:
-            daftar_model.append(m.name.replace("models/", ""))
+    daftar_model = [m.name.replace("models/", "") for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
     
     if not daftar_model:
-        st.error("⚠️ API Key kamu valid, tapi tidak memiliki akses ke model AI apa pun.")
+        st.error("⚠️ API Key tidak memiliki akses model.")
         st.stop()
 
-    # 3. Membuat menu Dropdown agar kamu bisa memilih mesin AI sendiri
-    pilihan_mesin = st.selectbox(
-        "⚙️ Pilih Mesin AI (Coba pilih versi yang paling baru/tinggi):", 
-        daftar_model
-    )
-    
-    # 4. Menyiapkan model otak AI sesuai pilihanmu
+    pilihan_mesin = st.selectbox("⚙️ Pilih Mesin AI:", daftar_model)
     model = genai.GenerativeModel(pilihan_mesin)
 
-    # 5. Membuat memori obrolan (Reset otomatis jika kamu mengganti mesin)
+    # ---------------------------------------------------------
+    # MENGUMPULKAN DATA KELAS SECARA DIAM-DIAM UNTUK OTAK AI
+    # ---------------------------------------------------------
+    ingatan_kelas = "Kamu adalah asisten AI ramah khusus untuk kelasku. Berikut adalah data PR kelas saat ini:\n"
+    for hari_cek in ["senin", "selasa", "rabu", "kamis", "jum'at"]:
+        file_cek = f"pr_{hari_cek}.txt"
+        if os.path.exists(file_cek):
+            with open(file_cek, "r") as f:
+                ingatan_kelas += f"- Hari {hari_cek.capitalize()}: {f.read()}\n"
+        else:
+            ingatan_kelas += f"- Hari {hari_cek.capitalize()}: Tidak ada PR.\n"
+    # ---------------------------------------------------------
+
     if "chat_session" not in st.session_state or st.session_state.get("mesin_aktif") != pilihan_mesin:
-        st.session_state.chat_session = model.start_chat(history=[])
+        # Kita masukkan data PR rahasia ke dalam sistem memori awalnya
+        st.session_state.chat_session = model.start_chat(history=[
+            {"role": "user", "parts": [ingatan_kelas]},
+            {"role": "model", "parts": ["Siap! Saya sudah menghafal semua jadwal dan PR kelas. Ada yang bisa saya bantu?"]}
+        ])
         st.session_state.mesin_aktif = pilihan_mesin
 
-    # 6. Menampilkan riwayat chat di layar
-    for message in st.session_state.chat_session.history:
-        peran = "assistant" if message.role == "model" else "user"
-        with st.chat_message(peran):
-            st.markdown(message.parts[0].text)
+    # Menampilkan riwayat chat (kecuali instruksi rahasia di awal)
+    for i, message in enumerate(st.session_state.chat_session.history):
+        if i >= 2: # Sembunyikan 2 pesan pertama (data PR rahasia) dari layar
+            peran = "assistant" if message.role == "model" else "user"
+            with st.chat_message(peran):
+                st.markdown(message.parts[0].text)
 
-    # 7. Kolom tempat kamu mengetik
-    pertanyaan_user = st.chat_input("Ketik pertanyaanmu di sini...")
+    pertanyaan_user = st.chat_input("Tanya soal PR atau yang lainnya di sini...")
 
     if pertanyaan_user:
         with st.chat_message("user"):
@@ -173,6 +177,6 @@ try:
             st.markdown(jawaban.text)
 
 except KeyError:
-    st.error("⚠️ Ups! API Key belum dipasang di bagian 'Secrets' pada pengaturan Streamlit.")
+    st.error("⚠️ Ups! API Key belum dipasang di 'Secrets'.")
 except Exception as e:
-    st.error(f"❌ Terjadi kesalahan pada AI: {e}")
+    st.error(f"❌ Tunggu sekitar 1 menit dan coba lagi. (Pesan sistem: {e})")
