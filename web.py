@@ -249,4 +249,4 @@ with tab2:
     else:
         st.info("Belum ada PR yang dimasukkan. Tambahkan PR di atas.")
 
-st.caption("--- Kelas 9D | Dibuat untuk memudahkan belajar")
+st.caption("--- Kelas 9D |")
