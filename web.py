@@ -30,12 +30,14 @@ DB_FILE = "kelas9d.db"
 
 def init_db():
     conn = sqlite3.connect(DB_FILE)
-    # Hapus tabel lama agar struktur baru diterapkan
+    # Reset tabel agar struktur baru diterapkan
     conn.execute("DROP TABLE IF EXISTS jadwal")
+    conn.execute("DROP TABLE IF EXISTS pr")
+    
     conn.execute('''CREATE TABLE jadwal 
                     (id INTEGER PRIMARY KEY, hari TEXT, jam TEXT, mata_pelajaran TEXT, guru TEXT)''')
-    conn.execute('''CREATE TABLE IF NOT EXISTS pr 
-                    (id INTEGER PRIMARY KEY, tanggal_input TEXT, mata_pelajaran TEXT, 
+    conn.execute('''CREATE TABLE pr 
+                    (id INTEGER PRIMARY KEY, hari TEXT, tanggal_input TEXT, mata_pelajaran TEXT, 
                      judul_pr TEXT, deadline TEXT, catatan TEXT, input_oleh TEXT)''')
     conn.commit()
     conn.close()
@@ -70,10 +72,7 @@ def seed_jadwal():
         ("Jumat", "09.00-10.40", "PPKN", "Umi Kariana"),
         ("Jumat", "10.40-11.20", "BAHASA DAERAH", "Bu Relly Susanti"),
     ]
-    conn.executemany("""
-        INSERT INTO jadwal (hari, jam, mata_pelajaran, guru) 
-        VALUES (?, ?, ?, ?)
-    """, jadwal_data)
+    conn.executemany("INSERT INTO jadwal (hari, jam, mata_pelajaran, guru) VALUES (?, ?, ?, ?)", jadwal_data)
     conn.commit()
     conn.close()
 
@@ -96,9 +95,11 @@ def save_pr(new_pr):
 
 def update_pr(pr_id, updated_data):
     conn = sqlite3.connect(DB_FILE)
-    conn.execute("""UPDATE pr SET mata_pelajaran=?, judul_pr=?, deadline=?, catatan=? WHERE id=?""", 
-                 (updated_data['mata_pelajaran'], updated_data['judul_pr'], 
-                  updated_data['deadline'], updated_data['catatan'], pr_id))
+    conn.execute("""UPDATE pr SET hari=?, mata_pelajaran=?, judul_pr=?, deadline=?, catatan=? 
+                    WHERE id=?""", 
+                 (updated_data['hari'], updated_data['mata_pelajaran'], 
+                  updated_data['judul_pr'], updated_data['deadline'], 
+                  updated_data['catatan'], pr_id))
     conn.commit()
     conn.close()
 
@@ -110,7 +111,7 @@ def delete_pr(pr_id):
 
 # Inisialisasi
 init_db()
-seed_jadwal()   # Selalu jalankan agar jadwal selalu ada
+seed_jadwal()
 
 # ====================== LOGIN ======================
 if "sudah_login" not in st.session_state:
@@ -163,18 +164,21 @@ with tab2:
     st.subheader("Edit PR" if edit_mode else "Tambah PR Baru")
 
     with st.form("form_pr"):
+        hari = st.selectbox("Hari *", ["Senin", "Selasa", "Rabu", "Kamis", "Jumat"])
         col1, col2 = st.columns(2)
         with col1:
             mapel = st.text_input("Mata Pelajaran *")
-            deadline = st.date_input("Deadline", min_value=datetime.today().date())
         with col2:
             judul = st.text_input("Judul PR / Tugas *")
+        
+        deadline = st.date_input("Deadline", min_value=datetime.today().date())
         catatan = st.text_area("Catatan (opsional)")
         
         submitted = st.form_submit_button("Simpan Perubahan" if edit_mode else "Simpan PR")
 
         if submitted and mapel and judul:
             data = {
+                "hari": hari,
                 "mata_pelajaran": mapel,
                 "judul_pr": judul,
                 "deadline": str(deadline),
@@ -194,19 +198,22 @@ with tab2:
                 st.success("✅ PR berhasil disimpan!")
             st.rerun()
         elif submitted:
-            st.error("Mata Pelajaran dan Judul PR wajib diisi.")
+            st.error("Hari, Mata Pelajaran, dan Judul PR wajib diisi.")
 
+    # Daftar PR
     df_pr = load_pr()
     if not df_pr.empty:
-        df_pr = df_pr.sort_values(by="deadline")
+        df_pr = df_pr.sort_values(by=["hari", "deadline"])
         st.subheader("Daftar PR")
         for _, row in df_pr.iterrows():
             with st.container(border=True):
                 col1, col2, col3 = st.columns([5, 1, 1])
                 with col1:
-                    st.write(f"**{row['mata_pelajaran']}** — {row['judul_pr']}")
+                    st.write(f"**{row['hari']}** — **{row['mata_pelajaran']}**")
+                    st.write(f"{row['judul_pr']}")
                     st.caption(f"Deadline: **{row['deadline']}** | Oleh: {row['input_oleh']}")
-                    if row['catatan']: st.write(row['catatan'])
+                    if row['catatan']:
+                        st.write("Catatan:", row['catatan'])
                 with col2:
                     if row['input_oleh'] == st.session_state.user_aktif:
                         if st.button("✏️ Edit", key=f"edit_{row['id']}"):
