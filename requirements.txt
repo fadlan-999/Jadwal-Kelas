@@ -1,2 +1,22 @@
-streamlit>=1.28.0
-pandas>=2.0.0
+# ================================================
+# requirements.txt - Kelas 9D App
+# ================================================
+
+# Core dependencies
+streamlit>=1.38.0
+pandas>=2.1.0
+
+# Optional but recommended for stability
+python-dateutil>=2.8.0
+pytz>=2024.1
+
+# ================================================
+# Catatan:
+# - streamlit     : Framework utama aplikasi
+# - pandas        : Untuk membaca, mengolah, dan menampilkan data
+# - python-dateutil : Membantu pengolahan tanggal & bulan
+# - pytz          : Untuk menghindari masalah timezone di masa depan
+#
+# Jika nanti ingin menambahkan fitur export ke Excel:
+# openpyxl>=3.1.0
+# ================================================
