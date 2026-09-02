@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import sqlite3
 from datetime import datetime, date
-import locale
 
 # ====================== CONFIG ======================
 st.set_page_config(page_title="Kelas 9D", layout="wide", initial_sidebar_state="collapsed")
@@ -14,14 +13,14 @@ st.markdown("""
     footer {visibility: hidden;}
     .main {background-color: #f8f9fa;}
     h1, h2, h3 {color: #1a237e;}
-    .riwayat-card {background-color: white; padding: 12px; border-radius: 10px; margin-bottom: 10px; border-left: 5px solid #1a237e;}
+    .card {background-color: white; padding: 15px; border-radius: 10px; margin-bottom: 10px; border-left: 5px solid #1a237e;}
 </style>
 """, unsafe_allow_html=True)
 
 st.title("📚 Kelas 9D")
 st.caption("Jadwal Pelajaran & Catatan PR/Tugas Tahun Pelajaran 2025/2026")
 
-# ====================== DATA SISWA ======================
+# ====================== DAFTAR SISWA ======================
 daftar_siswa = ["Pilih Nama Kamu...", "AFIQAH", "AISYAH", "ALIF", "ALIFAH", "ALYA", "ANISA", 
                 "AZZAM", "AZZIZAH", "CAHAYA", "DYAH", "DZAKKI", "EIJI", "FADLAN", "FAIZ", 
                 "FAKHRI", "FARAND", "FATIH", "HABIB", "HAIKAL", "JIBRIL", "KEANDRA", "KEJORA", 
@@ -39,7 +38,7 @@ def init_db():
                     (id INTEGER PRIMARY KEY, hari TEXT, jam TEXT, mata_pelajaran TEXT, guru TEXT)''')
     conn.execute('''CREATE TABLE pr 
                     (id INTEGER PRIMARY KEY, hari TEXT, tanggal_input TEXT, mata_pelajaran TEXT, 
-                     judul_pr TEXT, deadline TEXT, catatan TEXT, input_oleh TEXT)''')
+                     judul_pr TEXT, tanggal_pengumpulan TEXT, catatan TEXT, input_oleh TEXT)''')
     conn.commit()
     conn.close()
 
@@ -92,9 +91,10 @@ def save_pr(new_pr):
 
 def update_pr(pr_id, data):
     conn = sqlite3.connect(DB_FILE)
-    conn.execute("""UPDATE pr SET hari=?, mata_pelajaran=?, judul_pr=?, deadline=?, catatan=? 
-                    WHERE id=?""", (data['hari'], data['mata_pelajaran'], data['judul_pr'], 
-                                   data['deadline'], data['catatan'], pr_id))
+    conn.execute("""UPDATE pr SET hari=?, mata_pelajaran=?, judul_pr=?, tanggal_pengumpulan=?, catatan=? 
+                    WHERE id=?""",
+                 (data['hari'], data['mata_pelajaran'], data['judul_pr'], 
+                  data['tanggal_pengumpulan'], data['catatan'], pr_id))
     conn.commit()
     conn.close()
 
@@ -104,7 +104,7 @@ def delete_pr(pr_id):
     conn.commit()
     conn.close()
 
-# Inisialisasi
+# Inisialisasi Database
 init_db()
 seed_jadwal()
 
@@ -159,43 +159,51 @@ with tab2:
             mapel = st.text_input("Mata Pelajaran *")
         with col2:
             judul = st.text_input("Judul PR / Tugas *")
-        deadline = st.date_input("Deadline", value=date.today(), min_value=date.today())
+        
+        tanggal_pengumpulan = st.date_input("Tanggal Pengumpulan", value=date.today(), min_value=date.today())
         catatan = st.text_area("Catatan (opsional)")
         
         submitted = st.form_submit_button("💾 Simpan Perubahan" if edit_mode else "💾 Simpan PR", use_container_width=True)
         
         if submitted and mapel and judul:
-            data = {"hari": hari, "mata_pelajaran": mapel, "judul_pr": judul, 
-                   "deadline": str(deadline), "catatan": catatan}
+            data = {
+                "hari": hari,
+                "mata_pelajaran": mapel,
+                "judul_pr": judul,
+                "tanggal_pengumpulan": str(tanggal_pengumpulan),
+                "catatan": catatan
+            }
             if edit_mode:
                 update_pr(st.session_state.edit_pr_id, data)
-                st.success("PR berhasil diupdate!")
+                st.success("✅ PR berhasil diupdate!")
                 st.session_state.edit_pr_id = None
             else:
-                new_data = pd.DataFrame([{**data, "tanggal_input": datetime.now().strftime("%Y-%m-%d"),
-                                        "input_oleh": st.session_state.user_aktif}])
+                new_data = pd.DataFrame([{
+                    **data,
+                    "tanggal_input": datetime.now().strftime("%Y-%m-%d"),
+                    "input_oleh": st.session_state.user_aktif
+                }])
                 save_pr(new_data)
-                st.success("PR berhasil disimpan!")
+                st.success("✅ PR berhasil disimpan!")
             st.rerun()
 
     # Daftar PR Aktif
     df_pr = load_pr()
     if not df_pr.empty:
-        df_pr = df_pr.sort_values(by=["hari", "deadline"])
-        st.subheader("Daftar PR Aktif")
+        df_pr = df_pr.sort_values(by=["hari", "tanggal_pengumpulan"])
+        st.subheader("Daftar PR")
         for hari in ["Senin", "Selasa", "Rabu", "Kamis", "Jumat"]:
             pr_hari = df_pr[df_pr['hari'] == hari]
             if not pr_hari.empty:
                 st.markdown(f"### 🗓 {hari}")
                 for _, row in pr_hari.iterrows():
-                    days_left = (datetime.strptime(row['deadline'], "%Y-%m-%d").date() - date.today()).days
-                    color = "🔴" if days_left <= 2 else "🟠" if days_left <= 5 else "🟢"
                     with st.container(border=True):
-                        col1, col2 = st.columns([7,2])
+                        col1, col2 = st.columns([7, 2])
                         with col1:
-                            st.write(f"{color} **{row['mata_pelajaran']}** — {row['judul_pr']}")
-                            st.caption(f"Deadline: **{row['deadline']}** | Oleh: {row['input_oleh']}")
-                            if row['catatan']: st.write(row['catatan'])
+                            st.write(f"**{row['mata_pelajaran']}** — {row['judul_pr']}")
+                            st.caption(f"Pengumpulan: **{row['tanggal_pengumpulan']}** | Oleh: {row['input_oleh']}")
+                            if row['catatan']:
+                                st.write(row['catatan'])
                         with col2:
                             if row['input_oleh'] == st.session_state.user_aktif:
                                 if st.button("Edit", key=f"e{row['id']}"):
@@ -213,27 +221,22 @@ with tab3:
     if df_riwayat.empty:
         st.info("Belum ada riwayat PR.")
     else:
-        df_riwayat['deadline_date'] = pd.to_datetime(df_riwayat['deadline'])
-        df_riwayat['bulan'] = df_riwayat['deadline_date'].dt.strftime('%B %Y')
-        df_riwayat = df_riwayat.sort_values(by='deadline_date', ascending=False)
+        df_riwayat['tanggal_input'] = pd.to_datetime(df_riwayat['tanggal_input'])
+        df_riwayat['bulan'] = df_riwayat['tanggal_input'].dt.strftime('%B %Y')
+        df_riwayat = df_riwayat.sort_values(by='tanggal_input', ascending=False)
         
-        bulan_list = df_riwayat['bulan'].unique()
-        
-        for bulan in bulan_list:
+        for bulan in df_riwayat['bulan'].unique():
             df_bulan = df_riwayat[df_riwayat['bulan'] == bulan]
-            total_pr = len(df_bulan)
-            
-            with st.expander(f"📅 {bulan} ({total_pr} PR)", expanded=False):
-                for mapel in df_bulan['mata_pelajaran'].unique():
+            with st.expander(f"📅 {bulan} ({len(df_bulan)} PR)", expanded=True):
+                for mapel in sorted(df_bulan['mata_pelajaran'].unique()):
                     df_mapel = df_bulan[df_bulan['mata_pelajaran'] == mapel]
                     st.markdown(f"**{mapel}** ({len(df_mapel)} tugas)")
-                    
                     for _, row in df_mapel.iterrows():
                         with st.container(border=True):
                             st.write(f"**{row['hari']}** — {row['judul_pr']}")
-                            st.caption(f"Deadline: **{row['deadline']}** | Oleh: {row['input_oleh']}")
+                            st.caption(f"Tanggal Pengumpulan: **{row['tanggal_pengumpulan']}** | Oleh: {row['input_oleh']}")
                             if row['catatan']:
                                 st.write(f"Catatan: {row['catatan']}")
                     st.markdown("---")
 
-st.caption("--- Kelas 9D |")
+st.caption("--- Kelas 9D")
