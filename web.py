@@ -82,7 +82,7 @@ def delete_pr(pr_id):
 init_db()
 
 # ====================== ADMIN PASSWORD ======================
-ADMIN_PASSWORD = "12345"   # GANTI INI SESUKA KAMU!
+ADMIN_PASSWORD = "1"   # GANTI INI SESUKA KAMU!
 
 # ====================== LOGIN SYSTEM ======================
 if "sudah_login" not in st.session_state:
