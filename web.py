@@ -30,7 +30,9 @@ DB_FILE = "kelas9d.db"
 
 def init_db():
     conn = sqlite3.connect(DB_FILE)
-    conn.execute('''CREATE TABLE IF NOT EXISTS jadwal 
+    # Hapus tabel lama agar struktur baru diterapkan
+    conn.execute("DROP TABLE IF EXISTS jadwal")
+    conn.execute('''CREATE TABLE jadwal 
                     (id INTEGER PRIMARY KEY, hari TEXT, jam TEXT, mata_pelajaran TEXT, guru TEXT)''')
     conn.execute('''CREATE TABLE IF NOT EXISTS pr 
                     (id INTEGER PRIMARY KEY, tanggal_input TEXT, mata_pelajaran TEXT, 
@@ -40,7 +42,6 @@ def init_db():
 
 def seed_jadwal():
     conn = sqlite3.connect(DB_FILE)
-    conn.execute("DELETE FROM jadwal")
     jadwal_data = [
         ("Senin", "07.40-09.00", "MULOK", "Bu Asnani & Umi Megawati"),
         ("Senin", "09.00-10.40", "FIQIH", "Bu Ondiana"),
@@ -69,7 +70,10 @@ def seed_jadwal():
         ("Jumat", "09.00-10.40", "PPKN", "Umi Kariana"),
         ("Jumat", "10.40-11.20", "BAHASA DAERAH", "Bu Relly Susanti"),
     ]
-    conn.executemany("INSERT INTO jadwal (hari, jam, mata_pelajaran, guru) VALUES (?, ?, ?, ?)", jadwal_data)
+    conn.executemany("""
+        INSERT INTO jadwal (hari, jam, mata_pelajaran, guru) 
+        VALUES (?, ?, ?, ?)
+    """, jadwal_data)
     conn.commit()
     conn.close()
 
@@ -104,10 +108,9 @@ def delete_pr(pr_id):
     conn.commit()
     conn.close()
 
-# Inisialisasi Database & Jadwal
+# Inisialisasi
 init_db()
-if load_jadwal().empty:
-    seed_jadwal()
+seed_jadwal()   # Selalu jalankan agar jadwal selalu ada
 
 # ====================== LOGIN ======================
 if "sudah_login" not in st.session_state:
@@ -136,10 +139,8 @@ st.divider()
 
 tab1, tab2 = st.tabs(["📅 Jadwal Pelajaran", "📝 PR & Tugas"])
 
-# ====================== TAB JADWAL (FIXED - TANPA ADMIN) ======================
 with tab1:
     st.header("📅 Jadwal Pelajaran Kelas 9D")
-    
     st.info("""
     **Jam Sekolah**  
     Senin – Rabu : 06.40 – 15.10  
@@ -152,13 +153,9 @@ with tab1:
         jadwal_hari = df_jadwal[df_jadwal['hari'] == hari]
         if not jadwal_hari.empty:
             st.subheader(f"🗓 {hari}")
-            st.dataframe(
-                jadwal_hari[['jam', 'mata_pelajaran', 'guru']], 
-                use_container_width=True, 
-                hide_index=True
-            )
+            st.dataframe(jadwal_hari[['jam', 'mata_pelajaran', 'guru']], 
+                        use_container_width=True, hide_index=True)
 
-# ====================== TAB PR ======================
 with tab2:
     st.header("📝 PR & Tugas")
 
@@ -172,11 +169,9 @@ with tab2:
             deadline = st.date_input("Deadline", min_value=datetime.today().date())
         with col2:
             judul = st.text_input("Judul PR / Tugas *")
-        
         catatan = st.text_area("Catatan (opsional)")
         
-        submit_label = "Simpan Perubahan" if edit_mode else "Simpan PR"
-        submitted = st.form_submit_button(submit_label)
+        submitted = st.form_submit_button("Simpan Perubahan" if edit_mode else "Simpan PR")
 
         if submitted and mapel and judul:
             data = {
@@ -201,7 +196,6 @@ with tab2:
         elif submitted:
             st.error("Mata Pelajaran dan Judul PR wajib diisi.")
 
-    # Daftar PR
     df_pr = load_pr()
     if not df_pr.empty:
         df_pr = df_pr.sort_values(by="deadline")
@@ -212,8 +206,7 @@ with tab2:
                 with col1:
                     st.write(f"**{row['mata_pelajaran']}** — {row['judul_pr']}")
                     st.caption(f"Deadline: **{row['deadline']}** | Oleh: {row['input_oleh']}")
-                    if row['catatan']:
-                        st.write(row['catatan'])
+                    if row['catatan']: st.write(row['catatan'])
                 with col2:
                     if row['input_oleh'] == st.session_state.user_aktif:
                         if st.button("✏️ Edit", key=f"edit_{row['id']}"):
