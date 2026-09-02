@@ -18,7 +18,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 st.title("📚 Kelas 9D")
-st.caption("Jadwal Pelajaran & Catatan PR/Tugas Tahun Pelajaran 2025/2026")
+st.caption("Jadwal Pelajaran & Catatan PR/Tugas Tahun Pelajaran 2026/2027")
 
 # ====================== DAFTAR SISWA ======================
 daftar_siswa = ["Pilih Nama Kamu...", "AFIQAH", "AISYAH", "ALIF", "ALIFAH", "ALYA", "ANISA", 
