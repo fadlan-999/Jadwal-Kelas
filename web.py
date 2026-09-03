@@ -204,6 +204,7 @@ if not st.session_state.sudah_login:
 st.success(f"Selamat datang kembali, **{st.session_state.user_aktif}** 👋")
 if st.button("Ganti Akun"):
     st.session_state.sudah_login = False
+    st.session_state.user_aktif = ""
     st.rerun()
 
 st.divider()
