@@ -3,53 +3,23 @@ import pandas as pd
 import sqlite3
 from datetime import datetime, date
 
-# ====================== CONFIG ======================
 st.set_page_config(page_title="Kelas 9D", layout="wide", initial_sidebar_state="collapsed")
 
-# ====================== DARK ELEGANT DESIGN ======================
+# ====================== DESAIN DARK ELEGANT ======================
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@500;600&display=swap');
-    
     .main {background-color: #0f172a; color: #e2e8f0;}
     #MainMenu, header, footer {visibility: hidden;}
-    
-    h1 {
-        font-family: 'Poppins', sans-serif;
-        color: #67e8f9;
-        font-weight: 600;
-        letter-spacing: -1px;
-    }
-    .subtitle {color: #94a3b8; font-size: 1.1rem;}
-    
-    .stTabs [data-baseweb="tab-list"] {
-        background-color: #1e2937;
-        padding: 10px;
-        border-radius: 16px;
-    }
-    .stTabs [data-baseweb="tab"] {
-        color: #cbd5e1;
-        border-radius: 12px;
-        padding: 10px 24px;
-    }
-    .stTabs [aria-selected="true"] {
-        background-color: #14b8a6 !important;
-        color: white !important;
-    }
-    
-    .card {
-        background-color: #1e2937;
-        padding: 18px;
-        border-radius: 16px;
-        border: 1px solid #334155;
-        margin-bottom: 16px;
-    }
+    h1 {font-family: 'Poppins', sans-serif; color: #67e8f9; font-weight: 600;}
+    .subtitle {color: #94a3b8; font-size: 1.05rem;}
+    .card {background-color: #1e2937; padding: 18px; border-radius: 16px; border: 1px solid #334155; margin-bottom: 12px;}
     .teal {color: #67e8f9;}
 </style>
 """, unsafe_allow_html=True)
 
 st.markdown("<h1>✦ Kelas 9D</h1>", unsafe_allow_html=True)
-st.markdown("<p class='subtitle'>Modern Classroom Management • Tahun Pelajaran 2026/2027</p>", unsafe_allow_html=True)
+st.markdown("<p class='subtitle'>Modern Classroom Management • Tahun Pelajaran 2025/2026</p>", unsafe_allow_html=True)
 
 # ====================== DATA SISWA ======================
 daftar_siswa = ["Pilih Nama Kamu...", "AFIQAH", "AISYAH", "ALIF", "ALIFAH", "ALYA", "ANISA", 
@@ -103,12 +73,6 @@ def seed_jadwal():
     conn.commit()
     conn.close()
 
-def load_jadwal():
-    conn = sqlite3.connect(DB_FILE)
-    df = pd.read_sql("SELECT * FROM jadwal", conn)
-    conn.close()
-    return df
-
 def load_pr():
     conn = sqlite3.connect(DB_FILE)
     df = pd.read_sql("SELECT * FROM pr", conn)
@@ -154,7 +118,7 @@ if not st.session_state.sudah_login:
             st.rerun()
     st.stop()
 
-# ====================== MAIN INTERFACE ======================
+# ====================== MAIN ======================
 st.success(f"Selamat datang kembali, **{st.session_state.user_aktif}** 👋")
 if st.button("Ganti Akun"):
     st.session_state.sudah_login = False
@@ -165,19 +129,16 @@ st.divider()
 
 tab1, tab2, tab3 = st.tabs(["📅 Jadwal Pelajaran", "📝 Input PR", "📜 Riwayat PR"])
 
-# ====================== TAB 1: JADWAL ======================
 with tab1:
     st.markdown("### 📅 Jadwal Pelajaran Kelas 9D")
     st.info("**Jam Sekolah**\nSenin–Rabu: 06.40–15.10 | Kamis: 06.40–14.30 | Jumat: 06.40–11.20")
-    df_jadwal = load_jadwal()
+    df_jadwal = pd.read_sql("SELECT * FROM jadwal", sqlite3.connect(DB_FILE))
     for hari in ["Senin", "Selasa", "Rabu", "Kamis", "Jumat"]:
         jadwal_hari = df_jadwal[df_jadwal['hari'] == hari]
         if not jadwal_hari.empty:
             st.markdown(f"**🗓 {hari}**")
-            st.dataframe(jadwal_hari[['jam', 'mata_pelajaran', 'guru']], 
-                        use_container_width=True, hide_index=True)
+            st.dataframe(jadwal_hari[['jam', 'mata_pelajaran', 'guru']], use_container_width=True, hide_index=True)
 
-# ====================== TAB 2: INPUT PR ======================
 with tab2:
     st.markdown("### 📝 Input PR & Tugas")
     edit_mode = st.session_state.edit_pr_id is not None
@@ -187,60 +148,56 @@ with tab2:
         hari = st.selectbox("Hari", ["Senin", "Selasa", "Rabu", "Kamis", "Jumat"])
         col1, col2 = st.columns(2)
         with col1:
-            mapel = st.text_input("Mata Pelajaran")
+            mapel = st.text_input("Mata Pelajaran *")
         with col2:
-            judul = st.text_input("Judul PR / Tugas")
+            judul = st.text_input("Judul PR / Tugas *")
         tanggal_pengumpulan = st.date_input("Tanggal Pengumpulan", value=date.today())
         catatan = st.text_area("Catatan (opsional)")
         
-        if st.form_submit_button("Simpan", use_container_width=True):
+        submitted = st.form_submit_button("Simpan PR", use_container_width=True)
+        if submitted:
             if mapel and judul:
                 data = {
                     "hari": hari,
                     "mata_pelajaran": mapel,
                     "judul_pr": judul,
                     "tanggal_pengumpulan": str(tanggal_pengumpulan),
-                    "catatan": catatan
+                    "catatan": catatan,
+                    "tanggal_input": datetime.now().strftime("%Y-%m-%d"),
+                    "input_oleh": st.session_state.user_aktif
                 }
-                if edit_mode:
-                    update_pr(st.session_state.edit_pr_id, data)
-                    st.success("PR berhasil diupdate!")
-                    st.session_state.edit_pr_id = None
-                else:
-                    new_data = pd.DataFrame([{
-                        **data,
-                        "tanggal_input": datetime.now().strftime("%Y-%m-%d"),
-                        "input_oleh": st.session_state.user_aktif
-                    }])
-                    save_pr(new_data)
-                    st.success("PR berhasil disimpan!")
+                new_data = pd.DataFrame([data])
+                save_pr(new_data)
+                st.success("✅ PR berhasil disimpan!")
                 st.rerun()
+            else:
+                st.error("Mata Pelajaran dan Judul PR wajib diisi!")
 
-    # Daftar PR
+    # Tampilkan PR yang sudah diinput
     df_pr = load_pr()
     if not df_pr.empty:
         df_pr = df_pr.sort_values(by=["hari", "tanggal_pengumpulan"])
+        st.markdown("### PR yang Sudah Dimasukkan")
         for hari in ["Senin", "Selasa", "Rabu", "Kamis", "Jumat"]:
             pr_hari = df_pr[df_pr['hari'] == hari]
             if not pr_hari.empty:
                 st.markdown(f"**🗓 {hari}**")
                 for _, row in pr_hari.iterrows():
                     with st.container(border=True):
-                        col1, col2 = st.columns([6,2])
+                        col1, col2 = st.columns([6, 2])
                         with col1:
                             st.write(f"**{row['mata_pelajaran']}** — {row['judul_pr']}")
                             st.caption(f"Pengumpulan: **{row['tanggal_pengumpulan']}** | Oleh: {row['input_oleh']}")
-                            if row.get('catatan'): st.write(row['catatan'])
+                            if row['catatan']: st.write(row['catatan'])
                         with col2:
                             if row['input_oleh'] == st.session_state.user_aktif:
-                                if st.button("Edit", key=f"edit_{row['id']}"):
+                                if st.button("Edit", key=f"e{row['id']}"):
                                     st.session_state.edit_pr_id = row['id']
                                     st.rerun()
-                                if st.button("Hapus", key=f"del_{row['id']}"):
+                                if st.button("Hapus", key=f"d{row['id']}"):
                                     delete_pr(row['id'])
                                     st.rerun()
 
-# ====================== TAB 3: RIWAYAT PR ======================
 with tab3:
     st.markdown("### 📜 Riwayat PR")
     df_riwayat = load_pr()
@@ -261,8 +218,8 @@ with tab3:
                         with st.container(border=True):
                             st.write(f"**{row['hari']}** — {row['judul_pr']}")
                             st.caption(f"Pengumpulan: **{row['tanggal_pengumpulan']}** | Oleh: {row['input_oleh']}")
-                            if row.get('catatan'):
+                            if row['catatan']:
                                 st.write(row['catatan'])
                     st.markdown("---")
 
-st.caption("--- Kelas 9D • ")
+st.caption("--- Kelas 9D")
