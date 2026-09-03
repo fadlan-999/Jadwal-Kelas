@@ -5,7 +5,7 @@ from datetime import datetime, date
 
 st.set_page_config(page_title="Kelas 9D", layout="wide", initial_sidebar_state="collapsed")
 
-# ====================== DESAIN ======================
+# ====================== DESAIN DARK ELEGANT ======================
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@500;600&display=swap');
@@ -40,7 +40,8 @@ def init_db():
     conn = sqlite3.connect(DB_FILE)
     conn.execute("DROP TABLE IF EXISTS jadwal")
     conn.execute("DROP TABLE IF EXISTS pr")
-    conn.execute('''CREATE TABLE jadwal (id INTEGER PRIMARY KEY, hari TEXT, jam TEXT, mata_pelajaran TEXT, guru TEXT)''')
+    conn.execute('''CREATE TABLE jadwal 
+                    (id INTEGER PRIMARY KEY, hari TEXT, jam TEXT, mata_pelajaran TEXT, guru TEXT)''')
     conn.execute('''CREATE TABLE pr 
                     (id INTEGER PRIMARY KEY, hari TEXT, tanggal_input TEXT, mata_pelajaran TEXT, 
                      judul_pr TEXT, tanggal_pengumpulan TEXT, catatan TEXT, input_oleh TEXT)''')
@@ -49,10 +50,34 @@ def init_db():
 
 def seed_jadwal():
     conn = sqlite3.connect(DB_FILE)
-    data = [ ... ]  # (sama seperti sebelumnya, saya singkat)
-    # Isi data jadwal kamu tetap sama
-    conn.executemany("INSERT INTO jadwal (hari, jam, mata_pelajaran, guru) VALUES (?, ?, ?, ?)", data)
-    conn.commit()
+    # Cek apakah tabel sudah ada datanya
+    if conn.execute("SELECT COUNT(*) FROM jadwal").fetchone()[0] == 0:
+        data = [
+            ("Senin", "07.40-09.00", "MULOK", "Bu Asnani & Umi Megawati"),
+            ("Senin", "09.00-10.40", "FIQIH", "Bu Ondiana"),
+            ("Senin", "10.40-12.00", "SKI", "Bu Ida"),
+            ("Senin", "12.30-13.50", "ALQURAN HADIST", "Pak Iswadi"),
+            ("Senin", "13.50-15.10", "BAHASA INDONESIA", "Bu Irzawati"),
+            ("Selasa", "07.00-08.20", "IPA", "Bu Susi"),
+            ("Selasa", "08.20-09.40", "SBK", "Bu Ermawati"),
+            ("Selasa", "10.00-11.20", "MATEMATIKA", "Bu Asnani"),
+            ("Selasa", "11.20-13.50", "BAHASA INDONESIA", "Bu Irzawati"),
+            ("Selasa", "13.50-15.10", "IPS", "Bu Lia Lisa"),
+            ("Rabu", "07.00-08.20", "MATEMATIKA", "Bu Asnani"),
+            ("Rabu", "08.20-09.40", "PJOK", "Bu Maya"),
+            ("Rabu", "10.00-12.00", "TIK", "Bu Amilatun Khasanah"),
+            ("Rabu", "12.30-13.50", "Coding", "Bu Nona"),
+            ("Rabu", "13.50-15.10", "BAHASA INGGRIS", "Ma'am Nur"),
+            ("Kamis", "07.00-09.00", "BAHASA ARAB", "Buyah Fauzan"),
+            ("Kamis", "09.00-10.40", "BAHASA INGGRIS", "Ma'am Nur"),
+            ("Kamis", "10.40-13.10", "AQIDAH AKHLAK", "Umi Elsa"),
+            ("Kamis", "13.10-14.30", "IPS", "Bu Lia Lisa"),
+            ("Jumat", "07.40-09.00", "IPA", "Bu Susi"),
+            ("Jumat", "09.00-10.40", "PPKN", "Umi Kariana"),
+            ("Jumat", "10.40-11.20", "BAHASA DAERAH", "Bu Relly Susanti"),
+        ]
+        conn.executemany("INSERT INTO jadwal (hari, jam, mata_pelajaran, guru) VALUES (?, ?, ?, ?)", data)
+        conn.commit()
     conn.close()
 
 def load_pr():
@@ -73,6 +98,7 @@ def delete_pr(pr_id):
     conn.commit()
     conn.close()
 
+# Inisialisasi
 init_db()
 seed_jadwal()
 
@@ -92,6 +118,7 @@ if not st.session_state.sudah_login:
             st.rerun()
     st.stop()
 
+# ====================== MAIN APP ======================
 st.success(f"Selamat datang kembali, **{st.session_state.user_aktif}** 👋")
 if st.button("Ganti Akun"):
     st.session_state.sudah_login = False
@@ -114,7 +141,6 @@ with tab1:
 
 with tab2:
     st.markdown("### 📝 Input PR & Tugas")
-    
     with st.form("pr_form"):
         st.subheader("Tambah PR Baru")
         hari = st.selectbox("Hari", ["Senin", "Selasa", "Rabu", "Kamis", "Jumat"])
@@ -127,7 +153,7 @@ with tab2:
         catatan = st.text_area("Catatan (opsional)")
         
         if st.form_submit_button("Simpan PR", use_container_width=True):
-            if mapel and judul and mapel.strip() != "":
+            if mapel and judul and str(mapel).strip() != "":
                 data = {
                     "hari": hari,
                     "mata_pelajaran": mapel,
@@ -139,14 +165,13 @@ with tab2:
                 }
                 save_pr(pd.DataFrame([data]))
                 st.success("✅ PR berhasil disimpan!")
-                st.rerun()        # ← Ini yang paling penting
+                st.rerun()
             else:
                 st.error("Mata Pelajaran dan Judul PR wajib diisi!")
 
 with tab3:
     st.markdown("### 📜 Riwayat PR")
     df_riwayat = load_pr()
-    
     if df_riwayat.empty:
         st.info("Belum ada data riwayat PR.")
     else:
@@ -157,9 +182,9 @@ with tab3:
         for bulan in df_riwayat['bulan'].unique():
             df_bulan = df_riwayat[df_riwayat['bulan'] == bulan]
             with st.expander(f"📅 {bulan} ({len(df_bulan)} PR)", expanded=True):
-                for mapel in sorted(df_bulan['mata_pelajaran'].unique()):
-                    df_mapel = df_bulan[df_bulan['mata_pelajaran'] == mapel]
-                    st.markdown(f"**{mapel}** ({len(df_mapel)} tugas)")
+                for mapel_name in sorted(df_bulan['mata_pelajaran'].unique()):
+                    df_mapel = df_bulan[df_bulan['mata_pelajaran'] == mapel_name]
+                    st.markdown(f"**{mapel_name}** ({len(df_mapel)} tugas)")
                     for _, row in df_mapel.iterrows():
                         with st.container(border=True):
                             st.write(f"**{row['hari']}** — {row['judul_pr']}")
