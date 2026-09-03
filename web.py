@@ -291,7 +291,7 @@ with tab3:
                     for _, row in df_mapel.iterrows():
                         status_badge = "✅ Selesai" if row['status'] == 'selesai' else "🟢 Aktif"
                         with st.container(border=True):
-                            col1, col2 = st.columns([5,1])
+                            col1, col2, col3 = st.columns([5, 1.5, 1.5])
                             with col1:
                                 st.write(f"**{row['hari']}** — {row['judul_pr']}")
                                 st.caption(f"Pengumpulan: **{row['tanggal_pengumpulan']}** | Oleh: {row['input_oleh']}")
@@ -299,6 +299,19 @@ with tab3:
                                     st.write(row['catatan'])
                             with col2:
                                 st.caption(status_badge)
+                                # Tombol batalkan hanya muncul kalau status = selesai dan milik user tsb
+                                if row['status'] == 'selesai' and row['input_oleh'] == st.session_state.user_aktif:
+                                    if st.button("↩️ Batalkan", key=f"batal_{row['id']}"):
+                                        batalkan_selesai(row['id'])
+                                        st.success("Dikembalikan ke PR Aktif!")
+                                        st.rerun()
+                            with col3:
+                                # Tombol hapus permanen, hanya untuk yang punya PR itu
+                                if row['input_oleh'] == st.session_state.user_aktif:
+                                    if st.button("🗑️ Hapus", key=f"hapus_{row['id']}"):
+                                        hapus_permanen(row['id'])
+                                        st.success("PR dihapus permanen!")
+                                        st.rerun()
                     st.markdown("---")
 
 st.caption("--- Kelas 9D")
