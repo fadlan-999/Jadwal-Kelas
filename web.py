@@ -19,7 +19,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 st.markdown("<h1>✦ Kelas 9D</h1>", unsafe_allow_html=True)
-st.markdown("<p class='subtitle'>Modern Classroom Management • Tahun Pelajaran 2025/2026</p>", unsafe_allow_html=True)
+st.markdown("<p class='subtitle'>Modern Classroom Management • Tahun Pelajaran 2026/2027</p>", unsafe_allow_html=True)
 
 # ====================== DATA SISWA ======================
 daftar_siswa = ["Pilih Nama Kamu...", "AFIQAH", "AISYAH", "ALIF", "ALIFAH", "ALYA", "ANISA", 
