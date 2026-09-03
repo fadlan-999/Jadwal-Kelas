@@ -227,25 +227,24 @@ with tab2:
         judul = st.text_input("Judul PR / Tugas *")
         tanggal_pengumpulan = st.date_input("Tanggal Pengumpulan", value=date.today())
         catatan = st.text_area("Catatan (opsional)")
-        
+
         if st.form_submit_button("Simpan PR", use_container_width=True):
-    if mapel and judul and str(mapel).strip() != "":
-        # Cek duplikasi — JIKA ADA, BLOKIR (tidak disimpan)
-        if pr_sudah_ada(mapel, judul, tanggal_pengumpulan):
-            st.error("❌ PR ini sudah pernah dimasukkan! (Mata Pelajaran, Judul, dan Tanggal Pengumpulan sama). Tidak disimpan lagi.")
-        else:
-            data = {
-                "hari": hari, "mata_pelajaran": mapel, "judul_pr": judul,
-                "tanggal_pengumpulan": str(tanggal_pengumpulan), "catatan": catatan,
-                "tanggal_input": datetime.now().strftime("%Y-%m-%d"),
-                "input_oleh": st.session_state.user_aktif,
-                "status": "aktif"
-            }
-            save_pr(pd.DataFrame([data]))
-            st.success("✅ PR berhasil disimpan!")
-            st.rerun()
-    else:
-        st.error("Mata Pelajaran dan Judul PR wajib diisi!")
+            if mapel and judul and str(mapel).strip() != "":
+                if pr_sudah_ada(mapel, judul, tanggal_pengumpulan):
+                    st.error("❌ PR ini sudah pernah dimasukkan! (Mata Pelajaran, Judul, dan Tanggal Pengumpulan sama). Tidak disimpan lagi.")
+                else:
+                    data = {
+                        "hari": hari, "mata_pelajaran": mapel, "judul_pr": judul,
+                        "tanggal_pengumpulan": str(tanggal_pengumpulan), "catatan": catatan,
+                        "tanggal_input": datetime.now().strftime("%Y-%m-%d"),
+                        "input_oleh": st.session_state.user_aktif,
+                        "status": "aktif"
+                    }
+                    save_pr(pd.DataFrame([data]))
+                    st.success("✅ PR berhasil disimpan!")
+                    st.rerun()
+            else:
+                st.error("Mata Pelajaran dan Judul PR wajib diisi!")
 
     df_pr = load_pr_aktif()
     if not df_pr.empty:
@@ -254,14 +253,14 @@ with tab2:
         for _, row in df_pr.iterrows():
             status = status_deadline(row['tanggal_pengumpulan'])
             with st.container(border=True):
-                col1, col2 = st.columns([6,2])
+                col1, col2 = st.columns([6, 2])
                 with col1:
                     st.write(f"**{row['hari']} • {row['mata_pelajaran']}** — {row['judul_pr']}")
                     st.caption(f"Pengumpulan: **{row['tanggal_pengumpulan']}** | {status} | Oleh: {row['input_oleh']}")
-                    if row['catatan']: st.write(row['catatan'])
+                    if row['catatan']:
+                        st.write(row['catatan'])
                 with col2:
                     if row['input_oleh'] == st.session_state.user_aktif:
-                        # Saran #1: Tombol "Selesaikan" bukan "Hapus"
                         if st.button("✅ Selesaikan", key=f"selesai_{row['id']}"):
                             arsipkan_pr(row['id'])
                             st.success("PR ditandai selesai!")
