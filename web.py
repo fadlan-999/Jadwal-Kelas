@@ -33,20 +33,26 @@ daftar_mapel = [
 
 DB_FILE = "kelas9d.db"
 
-# ====================== DATABASE (SUDAH DIPERBAIKI) ======================
+# ====================== DATABASE ======================
 def init_db():
-    """Hanya membuat tabel JIKA BELUM ADA. Tidak akan menghapus data!"""
     conn = sqlite3.connect(DB_FILE)
     conn.execute('''CREATE TABLE IF NOT EXISTS jadwal 
                     (id INTEGER PRIMARY KEY, hari TEXT, jam TEXT, mata_pelajaran TEXT, guru TEXT)''')
     conn.execute('''CREATE TABLE IF NOT EXISTS pr 
                     (id INTEGER PRIMARY KEY, hari TEXT, tanggal_input TEXT, mata_pelajaran TEXT, 
-                     judul_pr TEXT, tanggal_pengumpulan TEXT, catatan TEXT, input_oleh TEXT)''')
+                     judul_pr TEXT, tanggal_pengumpulan TEXT, catatan TEXT, input_oleh TEXT,
+                     status TEXT DEFAULT 'aktif')''')
     conn.commit()
+    
+    # Migrasi: tambahkan kolom status jika belum ada (untuk yang sudah punya tabel lama)
+    cursor = conn.execute("PRAGMA table_info(pr)")
+    columns = [col[1] for col in cursor.fetchall()]
+    if 'status' not in columns:
+        conn.execute("ALTER TABLE pr ADD COLUMN status TEXT DEFAULT 'aktif'")
+        conn.commit()
     conn.close()
 
 def seed_jadwal():
-    """Hanya isi jadwal jika tabel jadwal masih kosong"""
     conn = sqlite3.connect(DB_FILE)
     count = conn.execute("SELECT COUNT(*) FROM jadwal").fetchone()[0]
     if count == 0:
@@ -78,7 +84,15 @@ def seed_jadwal():
         conn.commit()
     conn.close()
 
-def load_pr():
+def load_pr_aktif():
+    """Hanya PR yang statusnya aktif (untuk tab Input PR)"""
+    conn = sqlite3.connect(DB_FILE)
+    df = pd.read_sql("SELECT * FROM pr WHERE status = 'aktif' ORDER BY tanggal_input DESC", conn)
+    conn.close()
+    return df
+
+def load_semua_pr():
+    """SEMUA PR tanpa filter status (untuk tab Riwayat)"""
     conn = sqlite3.connect(DB_FILE)
     df = pd.read_sql("SELECT * FROM pr ORDER BY tanggal_input DESC", conn)
     conn.close()
@@ -90,13 +104,13 @@ def save_pr(new_pr):
     conn.commit()
     conn.close()
 
-def delete_pr(pr_id):
+def arsipkan_pr(pr_id):
+    """Ganti status jadi 'selesai', TIDAK menghapus data dari database"""
     conn = sqlite3.connect(DB_FILE)
-    conn.execute("DELETE FROM pr WHERE id = ?", (pr_id,))
+    conn.execute("UPDATE pr SET status = 'selesai' WHERE id = ?", (pr_id,))
     conn.commit()
     conn.close()
 
-# Inisialisasi HANYA SEKALI (aman dijalankan berkali-kali karena pakai IF NOT EXISTS)
 init_db()
 seed_jadwal()
 
@@ -152,7 +166,8 @@ with tab2:
                     "hari": hari, "mata_pelajaran": mapel, "judul_pr": judul,
                     "tanggal_pengumpulan": str(tanggal_pengumpulan), "catatan": catatan,
                     "tanggal_input": datetime.now().strftime("%Y-%m-%d"),
-                    "input_oleh": st.session_state.user_aktif
+                    "input_oleh": st.session_state.user_aktif,
+                    "status": "aktif"
                 }
                 save_pr(pd.DataFrame([data]))
                 st.success("✅ PR berhasil disimpan!")
@@ -160,7 +175,8 @@ with tab2:
             else:
                 st.error("Mata Pelajaran dan Judul PR wajib diisi!")
 
-    df_pr = load_pr()
+    # PR AKTIF SAJA yang ditampilkan di sini
+    df_pr = load_pr_aktif()
     if not df_pr.empty:
         st.markdown("### PR Aktif")
         for hari in ["Senin", "Selasa", "Rabu", "Kamis", "Jumat"]:
@@ -173,21 +189,28 @@ with tab2:
                         with col1:
                             st.write(f"**{row['mata_pelajaran']}** — {row['judul_pr']}")
                             st.caption(f"Pengumpulan: **{row['tanggal_pengumpulan']}** | Oleh: {row['input_oleh']}")
+                            if row['catatan']: st.write(row['catatan'])
                         with col2:
                             if row['input_oleh'] == st.session_state.user_aktif:
                                 if st.button("Hapus", key=f"d{row['id']}"):
-                                    delete_pr(row['id'])
+                                    arsipkan_pr(row['id'])   # ← Diarsipkan, bukan dihapus permanen
+                                    st.success("PR dipindahkan ke riwayat")
                                     st.rerun()
+    else:
+        st.info("Tidak ada PR aktif saat ini.")
 
 with tab3:
     st.markdown("### 📜 Riwayat PR")
-    df_riwayat = load_pr()
+    st.caption("Menampilkan SEMUA PR yang pernah dimasukkan, termasuk yang sudah dihapus dari PR Aktif")
+    
+    df_riwayat = load_semua_pr()   # ← Ambil SEMUA data, tanpa filter status
     if df_riwayat.empty:
         st.info("Belum ada data riwayat PR.")
     else:
         df_riwayat['tanggal_input'] = pd.to_datetime(df_riwayat['tanggal_input'])
         df_riwayat['bulan'] = df_riwayat['tanggal_input'].dt.strftime('%B %Y')
         df_riwayat = df_riwayat.sort_values(by='tanggal_input', ascending=False)
+        
         for bulan in df_riwayat['bulan'].unique():
             df_bulan = df_riwayat[df_riwayat['bulan'] == bulan]
             with st.expander(f"📅 {bulan} ({len(df_bulan)} PR)", expanded=True):
@@ -195,9 +218,16 @@ with tab3:
                     df_mapel = df_bulan[df_bulan['mata_pelajaran'] == mapel_name]
                     st.markdown(f"**{mapel_name}** ({len(df_mapel)} tugas)")
                     for _, row in df_mapel.iterrows():
+                        status_badge = "✅ Selesai" if row['status'] == 'selesai' else "🟢 Aktif"
                         with st.container(border=True):
-                            st.write(f"**{row['hari']}** — {row['judul_pr']}")
-                            st.caption(f"Pengumpulan: **{row['tanggal_pengumpulan']}** | Oleh: {row['input_oleh']}")
+                            col1, col2 = st.columns([5,1])
+                            with col1:
+                                st.write(f"**{row['hari']}** — {row['judul_pr']}")
+                                st.caption(f"Pengumpulan: **{row['tanggal_pengumpulan']}** | Oleh: {row['input_oleh']}")
+                                if row['catatan']:
+                                    st.write(row['catatan'])
+                            with col2:
+                                st.caption(status_badge)
                     st.markdown("---")
 
 st.caption("--- Kelas 9D")
