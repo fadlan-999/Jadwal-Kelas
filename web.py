@@ -5,14 +5,36 @@ from datetime import datetime, date
 
 st.set_page_config(page_title="Kelas 9D", layout="wide", initial_sidebar_state="collapsed")
 
+# ====================== CSS DIPERBAIKI (Saran #8) ======================
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@500;600&display=swap');
-    .main {background-color: #0f172a; color: #e2e8f0;}
-    #MainMenu, header, footer {visibility: hidden;}
-    h1 {font-family: 'Poppins', sans-serif; color: #67e8f9; font-weight: 600;}
-    .subtitle {color: #94a3b8; font-size: 1.05rem;}
-    .card {background-color: #1e2937; padding: 18px; border-radius: 16px; border: 1px solid #334155; margin-bottom: 12px;}
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@500;600&display=swap');
+
+.stApp {
+    background: linear-gradient(135deg, #0f172a, #111827, #172554);
+    color: #e2e8f0;
+}
+#MainMenu {visibility: hidden;}
+header {visibility: hidden;}
+footer {visibility: hidden;}
+
+h1 {
+    font-family: 'Poppins', sans-serif;
+    color: #67e8f9;
+    font-weight: 600;
+}
+.subtitle {color: #94a3b8; font-size: 1.05rem;}
+.card {background-color: #1e2937; padding: 18px; border-radius: 16px; border: 1px solid #334155; margin-bottom: 12px;}
+
+.stTabs [data-baseweb="tab-list"] {
+    background-color: #1e2937;
+    padding: 10px;
+    border-radius: 16px;
+}
+.stTabs [aria-selected="true"] {
+    background-color: #14b8a6 !important;
+    color: white !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -31,7 +53,6 @@ daftar_mapel = [
     "BAHASA INGGRIS", "BAHASA ARAB", "AQIDAH AKHLAK", "BAHASA DAERAH", "Lainnya"
 ]
 
-# Mapping bulan Inggris → Indonesia
 BULAN_INDO = {
     "January": "Januari", "February": "Februari", "March": "Maret",
     "April": "April", "May": "Mei", "June": "Juni",
@@ -40,15 +61,28 @@ BULAN_INDO = {
 }
 
 def format_bulan_indo(tanggal_dt):
-    """Konversi tanggal ke format 'Bulan Tahun' dalam Bahasa Indonesia"""
     bulan_en = tanggal_dt.strftime('%B')
     tahun = tanggal_dt.strftime('%Y')
-    bulan_id = BULAN_INDO.get(bulan_en, bulan_en)
-    return f"{bulan_id} {tahun}"
+    return f"{BULAN_INDO.get(bulan_en, bulan_en)} {tahun}"
+
+def status_deadline(tanggal_pengumpulan):
+    """Saran #5: Status deadline dengan warna"""
+    deadline = pd.to_datetime(tanggal_pengumpulan).date()
+    hari_ini = date.today()
+    selisih = (deadline - hari_ini).days
+    
+    if selisih < 0:
+        return "🔴 Terlambat"
+    elif selisih == 0:
+        return "🟠 Dikumpulkan hari ini"
+    elif selisih == 1:
+        return "🟡 Dikumpulkan besok"
+    else:
+        return f"🟢 {selisih} hari lagi"
 
 DB_FILE = "kelas9d.db"
 
-# ====================== DATABASE (dengan Context Manager) ======================
+# ====================== DATABASE ======================
 def init_db():
     with sqlite3.connect(DB_FILE) as conn:
         conn.execute('''CREATE TABLE IF NOT EXISTS jadwal 
@@ -57,8 +91,6 @@ def init_db():
                         (id INTEGER PRIMARY KEY, hari TEXT, tanggal_input TEXT, mata_pelajaran TEXT, 
                          judul_pr TEXT, tanggal_pengumpulan TEXT, catatan TEXT, input_oleh TEXT,
                          status TEXT DEFAULT 'aktif')''')
-        
-        # Migrasi kolom status jika belum ada
         cursor = conn.execute("PRAGMA table_info(pr)")
         columns = [col[1] for col in cursor.fetchall()]
         if 'status' not in columns:
@@ -99,12 +131,27 @@ def load_jadwal():
         return pd.read_sql("SELECT * FROM jadwal", conn)
 
 def load_pr_aktif():
+    """Saran #6: Diurutkan berdasarkan tanggal_pengumpulan (deadline terdekat di atas)"""
     with sqlite3.connect(DB_FILE) as conn:
-        return pd.read_sql("SELECT * FROM pr WHERE status = 'aktif' ORDER BY tanggal_input DESC", conn)
+        return pd.read_sql("""
+            SELECT * FROM pr 
+            WHERE status = 'aktif' 
+            ORDER BY tanggal_pengumpulan ASC
+        """, conn)
 
 def load_semua_pr():
     with sqlite3.connect(DB_FILE) as conn:
         return pd.read_sql("SELECT * FROM pr ORDER BY tanggal_input DESC", conn)
+
+def pr_sudah_ada(mapel, judul, tanggal_pengumpulan):
+    """Saran #7: Cek duplikasi PR"""
+    with sqlite3.connect(DB_FILE) as conn:
+        cursor = conn.execute("""
+            SELECT COUNT(*) FROM pr
+            WHERE mata_pelajaran = ? AND judul_pr = ? AND tanggal_pengumpulan = ?
+            AND status = 'aktif'
+        """, (mapel, judul, str(tanggal_pengumpulan)))
+        return cursor.fetchone()[0] > 0
 
 def save_pr(new_pr):
     with sqlite3.connect(DB_FILE) as conn:
@@ -139,6 +186,24 @@ if st.button("Ganti Akun"):
 
 st.divider()
 
+# ====================== DASHBOARD (Saran #9) ======================
+df_semua = load_semua_pr()
+df_aktif_count = load_pr_aktif()
+
+total_pr = len(df_semua)
+pr_aktif_jumlah = len(df_aktif_count)
+pr_selesai = len(df_semua[df_semua['status'] == 'selesai']) if not df_semua.empty else 0
+
+col1, col2, col3 = st.columns(3)
+with col1:
+    st.metric("📋 Total PR", total_pr)
+with col2:
+    st.metric("🟢 PR Aktif", pr_aktif_jumlah)
+with col3:
+    st.metric("✅ Selesai", pr_selesai)
+
+st.divider()
+
 tab1, tab2, tab3 = st.tabs(["📅 Jadwal Pelajaran", "📝 Input PR", "📜 Riwayat PR"])
 
 with tab1:
@@ -165,6 +230,10 @@ with tab2:
         
         if st.form_submit_button("Simpan PR", use_container_width=True):
             if mapel and judul and str(mapel).strip() != "":
+                # Saran #7: Cek duplikasi sebelum simpan
+                if pr_sudah_ada(mapel, judul, tanggal_pengumpulan):
+                    st.warning("⚠️ PR ini sepertinya sudah pernah dimasukkan sebelumnya (mata pelajaran, judul, dan tanggal pengumpulan sama). Tetap disimpan.")
+                
                 data = {
                     "hari": hari, "mata_pelajaran": mapel, "judul_pr": judul,
                     "tanggal_pengumpulan": str(tanggal_pengumpulan), "catatan": catatan,
@@ -181,29 +250,28 @@ with tab2:
     df_pr = load_pr_aktif()
     if not df_pr.empty:
         st.markdown("### PR Aktif")
-        for hari in ["Senin", "Selasa", "Rabu", "Kamis", "Jumat"]:
-            pr_hari = df_pr[df_pr['hari'] == hari]
-            if not pr_hari.empty:
-                st.markdown(f"**🗓 {hari}**")
-                for _, row in pr_hari.iterrows():
-                    with st.container(border=True):
-                        col1, col2 = st.columns([6,2])
-                        with col1:
-                            st.write(f"**{row['mata_pelajaran']}** — {row['judul_pr']}")
-                            st.caption(f"Pengumpulan: **{row['tanggal_pengumpulan']}** | Oleh: {row['input_oleh']}")
-                            if row['catatan']: st.write(row['catatan'])
-                        with col2:
-                            if row['input_oleh'] == st.session_state.user_aktif:
-                                if st.button("Hapus", key=f"d{row['id']}"):
-                                    arsipkan_pr(row['id'])
-                                    st.success("PR dipindahkan ke riwayat")
-                                    st.rerun()
+        st.caption("Diurutkan berdasarkan tanggal pengumpulan terdekat")
+        for _, row in df_pr.iterrows():
+            status = status_deadline(row['tanggal_pengumpulan'])
+            with st.container(border=True):
+                col1, col2 = st.columns([6,2])
+                with col1:
+                    st.write(f"**{row['hari']} • {row['mata_pelajaran']}** — {row['judul_pr']}")
+                    st.caption(f"Pengumpulan: **{row['tanggal_pengumpulan']}** | {status} | Oleh: {row['input_oleh']}")
+                    if row['catatan']: st.write(row['catatan'])
+                with col2:
+                    if row['input_oleh'] == st.session_state.user_aktif:
+                        # Saran #1: Tombol "Selesaikan" bukan "Hapus"
+                        if st.button("✅ Selesaikan", key=f"selesai_{row['id']}"):
+                            arsipkan_pr(row['id'])
+                            st.success("PR ditandai selesai!")
+                            st.rerun()
     else:
         st.info("Tidak ada PR aktif saat ini.")
 
 with tab3:
     st.markdown("### 📜 Riwayat PR")
-    st.caption("Menampilkan SEMUA PR yang pernah dimasukkan, termasuk yang sudah dihapus dari PR Aktif")
+    st.caption("Menampilkan SEMUA PR yang pernah dimasukkan, termasuk yang sudah selesai")
     
     df_riwayat = load_semua_pr()
     if df_riwayat.empty:
@@ -213,7 +281,6 @@ with tab3:
         df_riwayat['bulan'] = df_riwayat['tanggal_input_dt'].apply(format_bulan_indo)
         df_riwayat = df_riwayat.sort_values(by='tanggal_input_dt', ascending=False)
         
-        # Urutkan berdasarkan bulan (terbaru dulu)
         bulan_unik = df_riwayat[['bulan', 'tanggal_input_dt']].drop_duplicates().sort_values('tanggal_input_dt', ascending=False)['bulan'].tolist()
         
         for bulan in bulan_unik:
