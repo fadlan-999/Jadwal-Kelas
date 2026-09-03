@@ -229,23 +229,23 @@ with tab2:
         catatan = st.text_area("Catatan (opsional)")
         
         if st.form_submit_button("Simpan PR", use_container_width=True):
-            if mapel and judul and str(mapel).strip() != "":
-                # Saran #7: Cek duplikasi sebelum simpan
-                if pr_sudah_ada(mapel, judul, tanggal_pengumpulan):
-                    st.warning("⚠️ PR ini sepertinya sudah pernah dimasukkan sebelumnya (mata pelajaran, judul, dan tanggal pengumpulan sama). Tetap disimpan.")
-                
-                data = {
-                    "hari": hari, "mata_pelajaran": mapel, "judul_pr": judul,
-                    "tanggal_pengumpulan": str(tanggal_pengumpulan), "catatan": catatan,
-                    "tanggal_input": datetime.now().strftime("%Y-%m-%d"),
-                    "input_oleh": st.session_state.user_aktif,
-                    "status": "aktif"
-                }
-                save_pr(pd.DataFrame([data]))
-                st.success("✅ PR berhasil disimpan!")
-                st.rerun()
-            else:
-                st.error("Mata Pelajaran dan Judul PR wajib diisi!")
+    if mapel and judul and str(mapel).strip() != "":
+        # Cek duplikasi — JIKA ADA, BLOKIR (tidak disimpan)
+        if pr_sudah_ada(mapel, judul, tanggal_pengumpulan):
+            st.error("❌ PR ini sudah pernah dimasukkan! (Mata Pelajaran, Judul, dan Tanggal Pengumpulan sama). Tidak disimpan lagi.")
+        else:
+            data = {
+                "hari": hari, "mata_pelajaran": mapel, "judul_pr": judul,
+                "tanggal_pengumpulan": str(tanggal_pengumpulan), "catatan": catatan,
+                "tanggal_input": datetime.now().strftime("%Y-%m-%d"),
+                "input_oleh": st.session_state.user_aktif,
+                "status": "aktif"
+            }
+            save_pr(pd.DataFrame([data]))
+            st.success("✅ PR berhasil disimpan!")
+            st.rerun()
+    else:
+        st.error("Mata Pelajaran dan Judul PR wajib diisi!")
 
     df_pr = load_pr_aktif()
     if not df_pr.empty:
