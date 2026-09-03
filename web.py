@@ -5,7 +5,6 @@ from datetime import datetime, date
 
 st.set_page_config(page_title="Kelas 9D", layout="wide", initial_sidebar_state="collapsed")
 
-# ====================== DESAIN DARK ELEGANT ======================
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@500;600&display=swap');
@@ -20,7 +19,6 @@ st.markdown("""
 st.markdown("<h1>✦ Kelas 9D</h1>", unsafe_allow_html=True)
 st.markdown("<p class='subtitle'>Modern Classroom Management • Tahun Pelajaran 2026/2027</p>", unsafe_allow_html=True)
 
-# ====================== DATA ======================
 daftar_siswa = ["Pilih Nama Kamu...", "AFIQAH", "AISYAH", "ALIF", "ALIFAH", "ALYA", "ANISA", 
                 "AZZAM", "AZZIZAH", "CAHAYA", "DYAH", "DZAKKI", "EIJI", "FADLAN", "FAIZ", 
                 "FAKHRI", "FARAND", "FATIH", "HABIB", "HAIKAL", "JIBRIL", "KEANDRA", "KEJORA", 
@@ -35,23 +33,23 @@ daftar_mapel = [
 
 DB_FILE = "kelas9d.db"
 
-# ====================== DATABASE ======================
+# ====================== DATABASE (SUDAH DIPERBAIKI) ======================
 def init_db():
+    """Hanya membuat tabel JIKA BELUM ADA. Tidak akan menghapus data!"""
     conn = sqlite3.connect(DB_FILE)
-    conn.execute("DROP TABLE IF EXISTS jadwal")
-    conn.execute("DROP TABLE IF EXISTS pr")
-    conn.execute('''CREATE TABLE jadwal 
+    conn.execute('''CREATE TABLE IF NOT EXISTS jadwal 
                     (id INTEGER PRIMARY KEY, hari TEXT, jam TEXT, mata_pelajaran TEXT, guru TEXT)''')
-    conn.execute('''CREATE TABLE pr 
+    conn.execute('''CREATE TABLE IF NOT EXISTS pr 
                     (id INTEGER PRIMARY KEY, hari TEXT, tanggal_input TEXT, mata_pelajaran TEXT, 
                      judul_pr TEXT, tanggal_pengumpulan TEXT, catatan TEXT, input_oleh TEXT)''')
     conn.commit()
     conn.close()
 
 def seed_jadwal():
+    """Hanya isi jadwal jika tabel jadwal masih kosong"""
     conn = sqlite3.connect(DB_FILE)
-    # Cek apakah tabel sudah ada datanya
-    if conn.execute("SELECT COUNT(*) FROM jadwal").fetchone()[0] == 0:
+    count = conn.execute("SELECT COUNT(*) FROM jadwal").fetchone()[0]
+    if count == 0:
         data = [
             ("Senin", "07.40-09.00", "MULOK", "Bu Asnani & Umi Megawati"),
             ("Senin", "09.00-10.40", "FIQIH", "Bu Ondiana"),
@@ -98,7 +96,7 @@ def delete_pr(pr_id):
     conn.commit()
     conn.close()
 
-# Inisialisasi
+# Inisialisasi HANYA SEKALI (aman dijalankan berkali-kali karena pakai IF NOT EXISTS)
 init_db()
 seed_jadwal()
 
@@ -106,7 +104,6 @@ seed_jadwal()
 if "sudah_login" not in st.session_state:
     st.session_state.sudah_login = False
     st.session_state.user_aktif = ""
-    st.session_state.edit_pr_id = None
 
 if not st.session_state.sudah_login:
     st.markdown("### Silakan verifikasi identitasmu")
@@ -118,11 +115,9 @@ if not st.session_state.sudah_login:
             st.rerun()
     st.stop()
 
-# ====================== MAIN APP ======================
 st.success(f"Selamat datang kembali, **{st.session_state.user_aktif}** 👋")
 if st.button("Ganti Akun"):
     st.session_state.sudah_login = False
-    st.session_state.edit_pr_id = None
     st.rerun()
 
 st.divider()
@@ -147,7 +142,6 @@ with tab2:
         mapel = st.selectbox("Mata Pelajaran *", daftar_mapel)
         if mapel == "Lainnya":
             mapel = st.text_input("Masukkan Mata Pelajaran")
-
         judul = st.text_input("Judul PR / Tugas *")
         tanggal_pengumpulan = st.date_input("Tanggal Pengumpulan", value=date.today())
         catatan = st.text_area("Catatan (opsional)")
@@ -155,11 +149,8 @@ with tab2:
         if st.form_submit_button("Simpan PR", use_container_width=True):
             if mapel and judul and str(mapel).strip() != "":
                 data = {
-                    "hari": hari,
-                    "mata_pelajaran": mapel,
-                    "judul_pr": judul,
-                    "tanggal_pengumpulan": str(tanggal_pengumpulan),
-                    "catatan": catatan,
+                    "hari": hari, "mata_pelajaran": mapel, "judul_pr": judul,
+                    "tanggal_pengumpulan": str(tanggal_pengumpulan), "catatan": catatan,
                     "tanggal_input": datetime.now().strftime("%Y-%m-%d"),
                     "input_oleh": st.session_state.user_aktif
                 }
@@ -168,6 +159,25 @@ with tab2:
                 st.rerun()
             else:
                 st.error("Mata Pelajaran dan Judul PR wajib diisi!")
+
+    df_pr = load_pr()
+    if not df_pr.empty:
+        st.markdown("### PR Aktif")
+        for hari in ["Senin", "Selasa", "Rabu", "Kamis", "Jumat"]:
+            pr_hari = df_pr[df_pr['hari'] == hari]
+            if not pr_hari.empty:
+                st.markdown(f"**🗓 {hari}**")
+                for _, row in pr_hari.iterrows():
+                    with st.container(border=True):
+                        col1, col2 = st.columns([6,2])
+                        with col1:
+                            st.write(f"**{row['mata_pelajaran']}** — {row['judul_pr']}")
+                            st.caption(f"Pengumpulan: **{row['tanggal_pengumpulan']}** | Oleh: {row['input_oleh']}")
+                        with col2:
+                            if row['input_oleh'] == st.session_state.user_aktif:
+                                if st.button("Hapus", key=f"d{row['id']}"):
+                                    delete_pr(row['id'])
+                                    st.rerun()
 
 with tab3:
     st.markdown("### 📜 Riwayat PR")
@@ -178,7 +188,6 @@ with tab3:
         df_riwayat['tanggal_input'] = pd.to_datetime(df_riwayat['tanggal_input'])
         df_riwayat['bulan'] = df_riwayat['tanggal_input'].dt.strftime('%B %Y')
         df_riwayat = df_riwayat.sort_values(by='tanggal_input', ascending=False)
-        
         for bulan in df_riwayat['bulan'].unique():
             df_bulan = df_riwayat[df_riwayat['bulan'] == bulan]
             with st.expander(f"📅 {bulan} ({len(df_bulan)} PR)", expanded=True):
@@ -189,8 +198,6 @@ with tab3:
                         with st.container(border=True):
                             st.write(f"**{row['hari']}** — {row['judul_pr']}")
                             st.caption(f"Pengumpulan: **{row['tanggal_pengumpulan']}** | Oleh: {row['input_oleh']}")
-                            if row['catatan']:
-                                st.write(row['catatan'])
                     st.markdown("---")
 
 st.caption("--- Kelas 9D")
