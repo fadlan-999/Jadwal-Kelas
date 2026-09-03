@@ -31,85 +31,88 @@ daftar_mapel = [
     "BAHASA INGGRIS", "BAHASA ARAB", "AQIDAH AKHLAK", "BAHASA DAERAH", "Lainnya"
 ]
 
+# Mapping bulan Inggris → Indonesia
+BULAN_INDO = {
+    "January": "Januari", "February": "Februari", "March": "Maret",
+    "April": "April", "May": "Mei", "June": "Juni",
+    "July": "Juli", "August": "Agustus", "September": "September",
+    "October": "Oktober", "November": "November", "December": "Desember"
+}
+
+def format_bulan_indo(tanggal_dt):
+    """Konversi tanggal ke format 'Bulan Tahun' dalam Bahasa Indonesia"""
+    bulan_en = tanggal_dt.strftime('%B')
+    tahun = tanggal_dt.strftime('%Y')
+    bulan_id = BULAN_INDO.get(bulan_en, bulan_en)
+    return f"{bulan_id} {tahun}"
+
 DB_FILE = "kelas9d.db"
 
-# ====================== DATABASE ======================
+# ====================== DATABASE (dengan Context Manager) ======================
 def init_db():
-    conn = sqlite3.connect(DB_FILE)
-    conn.execute('''CREATE TABLE IF NOT EXISTS jadwal 
-                    (id INTEGER PRIMARY KEY, hari TEXT, jam TEXT, mata_pelajaran TEXT, guru TEXT)''')
-    conn.execute('''CREATE TABLE IF NOT EXISTS pr 
-                    (id INTEGER PRIMARY KEY, hari TEXT, tanggal_input TEXT, mata_pelajaran TEXT, 
-                     judul_pr TEXT, tanggal_pengumpulan TEXT, catatan TEXT, input_oleh TEXT,
-                     status TEXT DEFAULT 'aktif')''')
-    conn.commit()
-    
-    # Migrasi: tambahkan kolom status jika belum ada (untuk yang sudah punya tabel lama)
-    cursor = conn.execute("PRAGMA table_info(pr)")
-    columns = [col[1] for col in cursor.fetchall()]
-    if 'status' not in columns:
-        conn.execute("ALTER TABLE pr ADD COLUMN status TEXT DEFAULT 'aktif'")
-        conn.commit()
-    conn.close()
+    with sqlite3.connect(DB_FILE) as conn:
+        conn.execute('''CREATE TABLE IF NOT EXISTS jadwal 
+                        (id INTEGER PRIMARY KEY, hari TEXT, jam TEXT, mata_pelajaran TEXT, guru TEXT)''')
+        conn.execute('''CREATE TABLE IF NOT EXISTS pr 
+                        (id INTEGER PRIMARY KEY, hari TEXT, tanggal_input TEXT, mata_pelajaran TEXT, 
+                         judul_pr TEXT, tanggal_pengumpulan TEXT, catatan TEXT, input_oleh TEXT,
+                         status TEXT DEFAULT 'aktif')''')
+        
+        # Migrasi kolom status jika belum ada
+        cursor = conn.execute("PRAGMA table_info(pr)")
+        columns = [col[1] for col in cursor.fetchall()]
+        if 'status' not in columns:
+            conn.execute("ALTER TABLE pr ADD COLUMN status TEXT DEFAULT 'aktif'")
 
 def seed_jadwal():
-    conn = sqlite3.connect(DB_FILE)
-    count = conn.execute("SELECT COUNT(*) FROM jadwal").fetchone()[0]
-    if count == 0:
-        data = [
-            ("Senin", "07.40-09.00", "MULOK", "Bu Asnani & Umi Megawati"),
-            ("Senin", "09.00-10.40", "FIQIH", "Bu Ondiana"),
-            ("Senin", "10.40-12.00", "SKI", "Bu Ida"),
-            ("Senin", "12.30-13.50", "ALQURAN HADIST", "Pak Iswadi"),
-            ("Senin", "13.50-15.10", "BAHASA INDONESIA", "Bu Irzawati"),
-            ("Selasa", "07.00-08.20", "IPA", "Bu Susi"),
-            ("Selasa", "08.20-09.40", "SBK", "Bu Ermawati"),
-            ("Selasa", "10.00-11.20", "MATEMATIKA", "Bu Asnani"),
-            ("Selasa", "11.20-13.50", "BAHASA INDONESIA", "Bu Irzawati"),
-            ("Selasa", "13.50-15.10", "IPS", "Bu Lia Lisa"),
-            ("Rabu", "07.00-08.20", "MATEMATIKA", "Bu Asnani"),
-            ("Rabu", "08.20-09.40", "PJOK", "Bu Maya"),
-            ("Rabu", "10.00-12.00", "TIK", "Bu Amilatun Khasanah"),
-            ("Rabu", "12.30-13.50", "Coding", "Bu Nona"),
-            ("Rabu", "13.50-15.10", "BAHASA INGGRIS", "Ma'am Nur"),
-            ("Kamis", "07.00-09.00", "BAHASA ARAB", "Buyah Fauzan"),
-            ("Kamis", "09.00-10.40", "BAHASA INGGRIS", "Ma'am Nur"),
-            ("Kamis", "10.40-13.10", "AQIDAH AKHLAK", "Umi Elsa"),
-            ("Kamis", "13.10-14.30", "IPS", "Bu Lia Lisa"),
-            ("Jumat", "07.40-09.00", "IPA", "Bu Susi"),
-            ("Jumat", "09.00-10.40", "PPKN", "Umi Kariana"),
-            ("Jumat", "10.40-11.20", "BAHASA DAERAH", "Bu Relly Susanti"),
-        ]
-        conn.executemany("INSERT INTO jadwal (hari, jam, mata_pelajaran, guru) VALUES (?, ?, ?, ?)", data)
-        conn.commit()
-    conn.close()
+    with sqlite3.connect(DB_FILE) as conn:
+        count = conn.execute("SELECT COUNT(*) FROM jadwal").fetchone()[0]
+        if count == 0:
+            data = [
+                ("Senin", "07.40-09.00", "MULOK", "Bu Asnani & Umi Megawati"),
+                ("Senin", "09.00-10.40", "FIQIH", "Bu Ondiana"),
+                ("Senin", "10.40-12.00", "SKI", "Bu Ida"),
+                ("Senin", "12.30-13.50", "ALQURAN HADIST", "Pak Iswadi"),
+                ("Senin", "13.50-15.10", "BAHASA INDONESIA", "Bu Irzawati"),
+                ("Selasa", "07.00-08.20", "IPA", "Bu Susi"),
+                ("Selasa", "08.20-09.40", "SBK", "Bu Ermawati"),
+                ("Selasa", "10.00-11.20", "MATEMATIKA", "Bu Asnani"),
+                ("Selasa", "11.20-13.50", "BAHASA INDONESIA", "Bu Irzawati"),
+                ("Selasa", "13.50-15.10", "IPS", "Bu Lia Lisa"),
+                ("Rabu", "07.00-08.20", "MATEMATIKA", "Bu Asnani"),
+                ("Rabu", "08.20-09.40", "PJOK", "Bu Maya"),
+                ("Rabu", "10.00-12.00", "TIK", "Bu Amilatun Khasanah"),
+                ("Rabu", "12.30-13.50", "Coding", "Bu Nona"),
+                ("Rabu", "13.50-15.10", "BAHASA INGGRIS", "Ma'am Nur"),
+                ("Kamis", "07.00-09.00", "BAHASA ARAB", "Buyah Fauzan"),
+                ("Kamis", "09.00-10.40", "BAHASA INGGRIS", "Ma'am Nur"),
+                ("Kamis", "10.40-13.10", "AQIDAH AKHLAK", "Umi Elsa"),
+                ("Kamis", "13.10-14.30", "IPS", "Bu Lia Lisa"),
+                ("Jumat", "07.40-09.00", "IPA", "Bu Susi"),
+                ("Jumat", "09.00-10.40", "PPKN", "Umi Kariana"),
+                ("Jumat", "10.40-11.20", "BAHASA DAERAH", "Bu Relly Susanti"),
+            ]
+            conn.executemany("INSERT INTO jadwal (hari, jam, mata_pelajaran, guru) VALUES (?, ?, ?, ?)", data)
+
+def load_jadwal():
+    with sqlite3.connect(DB_FILE) as conn:
+        return pd.read_sql("SELECT * FROM jadwal", conn)
 
 def load_pr_aktif():
-    """Hanya PR yang statusnya aktif (untuk tab Input PR)"""
-    conn = sqlite3.connect(DB_FILE)
-    df = pd.read_sql("SELECT * FROM pr WHERE status = 'aktif' ORDER BY tanggal_input DESC", conn)
-    conn.close()
-    return df
+    with sqlite3.connect(DB_FILE) as conn:
+        return pd.read_sql("SELECT * FROM pr WHERE status = 'aktif' ORDER BY tanggal_input DESC", conn)
 
 def load_semua_pr():
-    """SEMUA PR tanpa filter status (untuk tab Riwayat)"""
-    conn = sqlite3.connect(DB_FILE)
-    df = pd.read_sql("SELECT * FROM pr ORDER BY tanggal_input DESC", conn)
-    conn.close()
-    return df
+    with sqlite3.connect(DB_FILE) as conn:
+        return pd.read_sql("SELECT * FROM pr ORDER BY tanggal_input DESC", conn)
 
 def save_pr(new_pr):
-    conn = sqlite3.connect(DB_FILE)
-    new_pr.to_sql('pr', conn, if_exists='append', index=False)
-    conn.commit()
-    conn.close()
+    with sqlite3.connect(DB_FILE) as conn:
+        new_pr.to_sql('pr', conn, if_exists='append', index=False)
 
 def arsipkan_pr(pr_id):
-    """Ganti status jadi 'selesai', TIDAK menghapus data dari database"""
-    conn = sqlite3.connect(DB_FILE)
-    conn.execute("UPDATE pr SET status = 'selesai' WHERE id = ?", (pr_id,))
-    conn.commit()
-    conn.close()
+    with sqlite3.connect(DB_FILE) as conn:
+        conn.execute("UPDATE pr SET status = 'selesai' WHERE id = ?", (pr_id,))
 
 init_db()
 seed_jadwal()
@@ -141,7 +144,7 @@ tab1, tab2, tab3 = st.tabs(["📅 Jadwal Pelajaran", "📝 Input PR", "📜 Riwa
 with tab1:
     st.markdown("### 📅 Jadwal Pelajaran Kelas 9D")
     st.info("**Jam Sekolah**\nSenin–Rabu: 06.40–15.10 | Kamis: 06.40–14.30 | Jumat: 06.40–11.20")
-    df_jadwal = pd.read_sql("SELECT * FROM jadwal", sqlite3.connect(DB_FILE))
+    df_jadwal = load_jadwal()
     for hari in ["Senin", "Selasa", "Rabu", "Kamis", "Jumat"]:
         jadwal_hari = df_jadwal[df_jadwal['hari'] == hari]
         if not jadwal_hari.empty:
@@ -175,7 +178,6 @@ with tab2:
             else:
                 st.error("Mata Pelajaran dan Judul PR wajib diisi!")
 
-    # PR AKTIF SAJA yang ditampilkan di sini
     df_pr = load_pr_aktif()
     if not df_pr.empty:
         st.markdown("### PR Aktif")
@@ -193,7 +195,7 @@ with tab2:
                         with col2:
                             if row['input_oleh'] == st.session_state.user_aktif:
                                 if st.button("Hapus", key=f"d{row['id']}"):
-                                    arsipkan_pr(row['id'])   # ← Diarsipkan, bukan dihapus permanen
+                                    arsipkan_pr(row['id'])
                                     st.success("PR dipindahkan ke riwayat")
                                     st.rerun()
     else:
@@ -203,15 +205,18 @@ with tab3:
     st.markdown("### 📜 Riwayat PR")
     st.caption("Menampilkan SEMUA PR yang pernah dimasukkan, termasuk yang sudah dihapus dari PR Aktif")
     
-    df_riwayat = load_semua_pr()   # ← Ambil SEMUA data, tanpa filter status
+    df_riwayat = load_semua_pr()
     if df_riwayat.empty:
         st.info("Belum ada data riwayat PR.")
     else:
-        df_riwayat['tanggal_input'] = pd.to_datetime(df_riwayat['tanggal_input'])
-        df_riwayat['bulan'] = df_riwayat['tanggal_input'].dt.strftime('%B %Y')
-        df_riwayat = df_riwayat.sort_values(by='tanggal_input', ascending=False)
+        df_riwayat['tanggal_input_dt'] = pd.to_datetime(df_riwayat['tanggal_input'])
+        df_riwayat['bulan'] = df_riwayat['tanggal_input_dt'].apply(format_bulan_indo)
+        df_riwayat = df_riwayat.sort_values(by='tanggal_input_dt', ascending=False)
         
-        for bulan in df_riwayat['bulan'].unique():
+        # Urutkan berdasarkan bulan (terbaru dulu)
+        bulan_unik = df_riwayat[['bulan', 'tanggal_input_dt']].drop_duplicates().sort_values('tanggal_input_dt', ascending=False)['bulan'].tolist()
+        
+        for bulan in bulan_unik:
             df_bulan = df_riwayat[df_riwayat['bulan'] == bulan]
             with st.expander(f"📅 {bulan} ({len(df_bulan)} PR)", expanded=True):
                 for mapel_name in sorted(df_bulan['mata_pelajaran'].unique()):
