@@ -157,10 +157,32 @@ def save_pr(new_pr):
     with sqlite3.connect(DB_FILE) as conn:
         new_pr.to_sql('pr', conn, if_exists='append', index=False)
 
-def arsipkan_pr(pr_id):
-    with sqlite3.connect(DB_FILE) as conn:
-        conn.execute("UPDATE pr SET status = 'selesai' WHERE id = ?", (pr_id,))
 
+def arsipkan_pr(pr_id):
+    """Ubah status PR menjadi selesai"""
+    with sqlite3.connect(DB_FILE) as conn:
+        conn.execute(
+            "UPDATE pr SET status = 'selesai' WHERE id = ?",
+            (pr_id,)
+        )
+
+
+def hapus_permanen(pr_id):
+    """Hapus PR selamanya dari database"""
+    with sqlite3.connect(DB_FILE) as conn:
+        conn.execute(
+            "DELETE FROM pr WHERE id = ?",
+            (pr_id,)
+        )
+
+
+def batalkan_selesai(pr_id):
+    """Kembalikan status dari 'selesai' menjadi 'aktif' lagi"""
+    with sqlite3.connect(DB_FILE) as conn:
+        conn.execute(
+            "UPDATE pr SET status = 'aktif' WHERE id = ?",
+            (pr_id,)
+        )
 init_db()
 seed_jadwal()
 
