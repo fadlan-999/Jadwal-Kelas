@@ -21,12 +21,19 @@ st.markdown("""
 st.markdown("<h1>✦ Kelas 9D</h1>", unsafe_allow_html=True)
 st.markdown("<p class='subtitle'>Modern Classroom Management • Tahun Pelajaran 2026/2027</p>", unsafe_allow_html=True)
 
-# ====================== DATA SISWA ======================
+# ====================== DATA SISWA & MATA PELAJARAN ======================
 daftar_siswa = ["Pilih Nama Kamu...", "AFIQAH", "AISYAH", "ALIF", "ALIFAH", "ALYA", "ANISA", 
                 "AZZAM", "AZZIZAH", "CAHAYA", "DYAH", "DZAKKI", "EIJI", "FADLAN", "FAIZ", 
                 "FAKHRI", "FARAND", "FATIH", "HABIB", "HAIKAL", "JIBRIL", "KEANDRA", "KEJORA", 
                 "KEYLA", "MASUD", "NABILA", "NADHIF MUZAKI", "NADHIF RAZA", "NINDITA", 
                 "NINDYA", "RAFA BB", "RAIS", "RAKA", "RIFQA", "SHAQUILLA", "SHOFI", "ZILAN"]
+
+daftar_mapel = [
+    "MULOK", "FIQIH", "SKI", "ALQURAN HADIST", "BAHASA INDONESIA",
+    "IPA", "MATEMATIKA", "IPS", "PPKN", "PJOK", "SBK", "TIK", "Coding",
+    "BAHASA INGGRIS", "BAHASA ARAB", "AQIDAH AKHLAK", "BAHASA DAERAH",
+    "Lainnya"
+]
 
 DB_FILE = "kelas9d.db"
 
@@ -146,17 +153,20 @@ with tab2:
     with st.form("pr_form"):
         st.subheader("Edit PR" if edit_mode else "Tambah PR Baru")
         hari = st.selectbox("Hari", ["Senin", "Selasa", "Rabu", "Kamis", "Jumat"])
-        col1, col2 = st.columns(2)
-        with col1:
-            mapel = st.text_input("Mata Pelajaran *")
-        with col2:
-            judul = st.text_input("Judul PR / Tugas *")
+        
+        mapel_selected = st.selectbox("Mata Pelajaran *", daftar_mapel)
+        if mapel_selected == "Lainnya":
+            mapel = st.text_input("Masukkan nama mata pelajaran")
+        else:
+            mapel = mapel_selected
+
+        judul = st.text_input("Judul PR / Tugas *")
         tanggal_pengumpulan = st.date_input("Tanggal Pengumpulan", value=date.today())
         catatan = st.text_area("Catatan (opsional)")
         
         submitted = st.form_submit_button("Simpan PR", use_container_width=True)
         if submitted:
-            if mapel and judul:
+            if mapel and judul and mapel.strip() != "":
                 data = {
                     "hari": hari,
                     "mata_pelajaran": mapel,
@@ -166,8 +176,7 @@ with tab2:
                     "tanggal_input": datetime.now().strftime("%Y-%m-%d"),
                     "input_oleh": st.session_state.user_aktif
                 }
-                new_data = pd.DataFrame([data])
-                save_pr(new_data)
+                save_pr(pd.DataFrame([data]))
                 st.success("✅ PR berhasil disimpan!")
                 st.rerun()
             else:
