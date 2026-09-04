@@ -189,8 +189,13 @@ def batalkan_selesai(pr_id):
     with engine.begin() as conn:
         conn.execute(text("UPDATE pr SET status = 'aktif' WHERE id = :id"), {"id": pr_id})
 
-init_db()
-seed_jadwal()
+@st.cache_resource
+def setup_database():
+    init_db()
+    seed_jadwal()
+    return True
+
+setup_database()
 
 # ====================== LOGIN ======================
 if "sudah_login" not in st.session_state:
