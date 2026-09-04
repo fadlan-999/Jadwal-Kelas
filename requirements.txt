@@ -1,4 +1,4 @@
-streamlit
-pandas
-sqlalchemy>=2.0
-sqlalchemy-libsql
+   streamlit
+   pandas
+   sqlalchemy>=2.0
+   sqlalchemy-libsql
