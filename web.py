@@ -5,35 +5,111 @@ from sqlalchemy import create_engine, text
 
 st.set_page_config(page_title="Kelas 9D", layout="wide", initial_sidebar_state="collapsed")
 
-# ====================== CSS DIPERBAIKI (Saran #8) ======================
+# ====================== CSS (tema "Nuansa" - biru monokrom gelap, kaca) ======================
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root{
+    --h: 222;
+    --c-950: hsl(var(--h), 48%, 5%);
+    --c-900: hsl(var(--h), 42%, 8%);
+    --c-850: hsl(var(--h), 38%, 11%);
+    --c-800: hsl(var(--h), 34%, 14%);
+    --c-700: hsl(var(--h), 28%, 20%);
+    --c-500: hsl(var(--h), 22%, 42%);
+    --c-400: hsl(var(--h), 24%, 58%);
+    --c-300: hsl(var(--h), 32%, 72%);
+    --c-100: hsl(var(--h), 50%, 93%);
+    --accent: hsl(var(--h), 78%, 70%);
+    --line: hsla(var(--h), 40%, 80%, .12);
+    --line-strong: hsla(var(--h), 40%, 80%, .22);
+    --glass: hsla(var(--h), 40%, 12%, .55);
+}
 
 .stApp {
-    background: linear-gradient(135deg, #0f172a, #111827, #172554);
-    color: #e2e8f0;
+    background:
+      radial-gradient(ellipse 70% 55% at 15% 10%, hsla(var(--h), 70%, 45%, .22), transparent 65%),
+      radial-gradient(ellipse 60% 50% at 85% 85%, hsla(var(--h), 60%, 40%, .18), transparent 65%),
+      linear-gradient(160deg, var(--c-900) 0%, var(--c-950) 60%, hsl(var(--h),45%,4%) 100%);
+    color: var(--c-100);
+    font-family: 'Manrope', system-ui, sans-serif;
+}
+.stApp::before{
+    content:""; position:fixed; inset:0; z-index:-1; pointer-events:none;
+    background-image:
+      linear-gradient(var(--line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--line) 1px, transparent 1px);
+    background-size: 72px 72px;
+    mask-image: radial-gradient(ellipse 80% 70% at 50% 30%, #000 30%, transparent 100%);
+    -webkit-mask-image: radial-gradient(ellipse 80% 70% at 50% 30%, #000 30%, transparent 100%);
 }
 #MainMenu {visibility: hidden;}
 header {visibility: hidden;}
 footer {visibility: hidden;}
 
 h1 {
-    font-family: 'Poppins', sans-serif;
-    color: #67e8f9;
-    font-weight: 600;
+    font-family: 'Manrope', sans-serif;
+    font-weight: 800;
+    letter-spacing: -.02em;
+    background: linear-gradient(135deg, var(--c-100), var(--accent));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
 }
-.subtitle {color: #94a3b8; font-size: 1.05rem;}
-.card {background-color: #1e2937; padding: 18px; border-radius: 16px; border: 1px solid #334155; margin-bottom: 12px;}
+.subtitle {color: var(--c-400); font-size: 1.02rem; font-family: 'JetBrains Mono', monospace;}
 
-.stTabs [data-baseweb="tab-list"] {
-    background-color: #1e2937;
-    padding: 10px;
+/* Kartu (container dengan border, dipakai untuk item PR) */
+[data-testid="stVerticalBlockBorderWrapper"]:has(> div > [data-testid="stVerticalBlock"]) {
+    background: linear-gradient(180deg, hsla(var(--h),40%,16%,.55), hsla(var(--h),42%,9%,.65));
+    border: 1px solid var(--line-strong) !important;
+    border-radius: 16px !important;
+    backdrop-filter: blur(16px);
+}
+
+/* Metric (Total PR, PR Aktif, Selesai) */
+[data-testid="stMetric"] {
+    background: linear-gradient(180deg, hsla(var(--h),40%,16%,.55), hsla(var(--h),42%,9%,.65));
+    border: 1px solid var(--line-strong);
     border-radius: 16px;
+    padding: 16px 18px;
+    backdrop-filter: blur(16px);
+}
+[data-testid="stMetricValue"] { color: var(--c-100); font-family: 'JetBrains Mono', monospace; }
+
+/* Tab */
+.stTabs [data-baseweb="tab-list"] {
+    background: hsla(var(--h),45%,5%,.55);
+    border: 1px solid var(--line);
+    padding: 5px;
+    border-radius: 14px;
+    gap: 4px;
+}
+.stTabs [data-baseweb="tab"] {
+    color: var(--c-400);
+    font-weight: 600;
+    border-radius: 10px !important;
 }
 .stTabs [aria-selected="true"] {
-    background-color: #14b8a6 !important;
-    color: white !important;
+    background: linear-gradient(180deg, var(--c-700), var(--c-800)) !important;
+    color: var(--c-100) !important;
+    border: 1px solid var(--line-strong) !important;
+}
+
+/* Tombol */
+.stButton button, .stFormSubmitButton button {
+    background: linear-gradient(135deg, var(--c-300), var(--accent)) !important;
+    color: var(--c-950) !important;
+    border: none !important;
+    border-radius: 10px !important;
+    font-weight: 700 !important;
+}
+
+/* Expander (Riwayat PR per bulan) */
+[data-testid="stExpander"] {
+    background: hsla(var(--h),40%,12%,.4);
+    border: 1px solid var(--line-strong);
+    border-radius: 14px;
 }
 </style>
 """, unsafe_allow_html=True)
