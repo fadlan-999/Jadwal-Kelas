@@ -95,6 +95,12 @@ h1 {
     color: var(--c-100) !important;
     border: 1px solid var(--line-strong) !important;
 }
+.stTabs [data-baseweb="tab-highlight"] {
+    background-color: var(--accent) !important;
+}
+.stTabs [data-baseweb="tab-border"] {
+    background-color: transparent !important;
+}
 
 /* Tombol */
 .stButton button, .stFormSubmitButton button {
