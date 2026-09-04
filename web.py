@@ -80,31 +80,29 @@ def status_deadline(tanggal_pengumpulan):
     else:
         return f"🟢 {selisih} hari lagi"
 
-# ====================== DATABASE (Turso - persisten, tidak hilang saat app restart) ======================
+# ====================== DATABASE (Supabase Postgres - persisten, tidak hilang saat app restart) ======================
 @st.cache_resource
 def get_engine():
     """
-    Koneksi ke Turso (SQLite-cloud). Butuh TURSO_DATABASE_URL dan TURSO_AUTH_TOKEN
+    Koneksi ke Supabase Postgres. Butuh SUPABASE_DB_URL
     di Streamlit Cloud > Settings > Secrets.
     """
-    db_url = st.secrets["TURSO_DATABASE_URL"]
-    auth_token = st.secrets["TURSO_AUTH_TOKEN"]
-    return create_engine(
-        f"sqlite+libsql://{db_url}?secure=true",
-        connect_args={"auth_token": auth_token},
-    )
+    db_url = st.secrets["SUPABASE_DB_URL"]
+    return create_engine(db_url, pool_pre_ping=True)
 
 engine = get_engine()
 
 def init_db():
     with engine.begin() as conn:
         conn.execute(text('''CREATE TABLE IF NOT EXISTS jadwal 
-                        (id INTEGER PRIMARY KEY, hari TEXT, jam TEXT, mata_pelajaran TEXT, guru TEXT)'''))
+                        (id SERIAL PRIMARY KEY, hari TEXT, jam TEXT, mata_pelajaran TEXT, guru TEXT)'''))
         conn.execute(text('''CREATE TABLE IF NOT EXISTS pr 
-                        (id INTEGER PRIMARY KEY, hari TEXT, tanggal_input TEXT, mata_pelajaran TEXT, 
+                        (id SERIAL PRIMARY KEY, hari TEXT, tanggal_input TEXT, mata_pelajaran TEXT, 
                          judul_pr TEXT, tanggal_pengumpulan TEXT, catatan TEXT, input_oleh TEXT,
                          status TEXT DEFAULT 'aktif')'''))
-        columns = [row[1] for row in conn.execute(text("PRAGMA table_info(pr)")).fetchall()]
+        columns = [row[0] for row in conn.execute(text(
+            "SELECT column_name FROM information_schema.columns WHERE table_name = 'pr'"
+        )).fetchall()]
         if 'status' not in columns:
             conn.execute(text("ALTER TABLE pr ADD COLUMN status TEXT DEFAULT 'aktif'"))
 
