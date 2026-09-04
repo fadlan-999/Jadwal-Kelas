@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
-import sqlite3
 from datetime import datetime, date
+from sqlalchemy import create_engine, text
 
 st.set_page_config(page_title="Kelas 9D", layout="wide", initial_sidebar_state="collapsed")
 
@@ -80,25 +80,37 @@ def status_deadline(tanggal_pengumpulan):
     else:
         return f"🟢 {selisih} hari lagi"
 
-DB_FILE = "kelas9d.db"
+# ====================== DATABASE (Turso - persisten, tidak hilang saat app restart) ======================
+@st.cache_resource
+def get_engine():
+    """
+    Koneksi ke Turso (SQLite-cloud). Butuh TURSO_DATABASE_URL dan TURSO_AUTH_TOKEN
+    di Streamlit Cloud > Settings > Secrets.
+    """
+    db_url = st.secrets["TURSO_DATABASE_URL"]
+    auth_token = st.secrets["TURSO_AUTH_TOKEN"]
+    return create_engine(
+        f"sqlite+libsql://{db_url}?secure=true",
+        connect_args={"auth_token": auth_token},
+    )
 
-# ====================== DATABASE ======================
+engine = get_engine()
+
 def init_db():
-    with sqlite3.connect(DB_FILE) as conn:
-        conn.execute('''CREATE TABLE IF NOT EXISTS jadwal 
-                        (id INTEGER PRIMARY KEY, hari TEXT, jam TEXT, mata_pelajaran TEXT, guru TEXT)''')
-        conn.execute('''CREATE TABLE IF NOT EXISTS pr 
+    with engine.begin() as conn:
+        conn.execute(text('''CREATE TABLE IF NOT EXISTS jadwal 
+                        (id INTEGER PRIMARY KEY, hari TEXT, jam TEXT, mata_pelajaran TEXT, guru TEXT)'''))
+        conn.execute(text('''CREATE TABLE IF NOT EXISTS pr 
                         (id INTEGER PRIMARY KEY, hari TEXT, tanggal_input TEXT, mata_pelajaran TEXT, 
                          judul_pr TEXT, tanggal_pengumpulan TEXT, catatan TEXT, input_oleh TEXT,
-                         status TEXT DEFAULT 'aktif')''')
-        cursor = conn.execute("PRAGMA table_info(pr)")
-        columns = [col[1] for col in cursor.fetchall()]
+                         status TEXT DEFAULT 'aktif')'''))
+        columns = [row[1] for row in conn.execute(text("PRAGMA table_info(pr)")).fetchall()]
         if 'status' not in columns:
-            conn.execute("ALTER TABLE pr ADD COLUMN status TEXT DEFAULT 'aktif'")
+            conn.execute(text("ALTER TABLE pr ADD COLUMN status TEXT DEFAULT 'aktif'"))
 
 def seed_jadwal():
-    with sqlite3.connect(DB_FILE) as conn:
-        count = conn.execute("SELECT COUNT(*) FROM jadwal").fetchone()[0]
+    with engine.begin() as conn:
+        count = conn.execute(text("SELECT COUNT(*) FROM jadwal")).scalar()
         if count == 0:
             data = [
                 ("Senin", "07.40-09.00", "MULOK", "Bu Asnani & Umi Megawati"),
@@ -124,65 +136,61 @@ def seed_jadwal():
                 ("Jumat", "09.00-10.40", "PPKN", "Umi Kariana"),
                 ("Jumat", "10.40-11.20", "BAHASA DAERAH", "Bu Relly Susanti"),
             ]
-            conn.executemany("INSERT INTO jadwal (hari, jam, mata_pelajaran, guru) VALUES (?, ?, ?, ?)", data)
+            rows = [{"hari": h, "jam": j, "mapel": m, "guru": g} for h, j, m, g in data]
+            conn.execute(
+                text("INSERT INTO jadwal (hari, jam, mata_pelajaran, guru) VALUES (:hari, :jam, :mapel, :guru)"),
+                rows
+            )
 
 def load_jadwal():
-    with sqlite3.connect(DB_FILE) as conn:
-        return pd.read_sql("SELECT * FROM jadwal", conn)
+    with engine.connect() as conn:
+        return pd.read_sql(text("SELECT * FROM jadwal"), conn)
 
 def load_pr_aktif():
     """Saran #6: Diurutkan berdasarkan tanggal_pengumpulan (deadline terdekat di atas)"""
-    with sqlite3.connect(DB_FILE) as conn:
-        return pd.read_sql("""
+    with engine.connect() as conn:
+        return pd.read_sql(text("""
             SELECT * FROM pr 
             WHERE status = 'aktif' 
             ORDER BY tanggal_pengumpulan ASC
-        """, conn)
+        """), conn)
 
 def load_semua_pr():
-    with sqlite3.connect(DB_FILE) as conn:
-        return pd.read_sql("SELECT * FROM pr ORDER BY tanggal_input DESC", conn)
+    with engine.connect() as conn:
+        return pd.read_sql(text("SELECT * FROM pr ORDER BY tanggal_input DESC"), conn)
 
 def pr_sudah_ada(mapel, judul, tanggal_pengumpulan):
     """Saran #7: Cek duplikasi PR"""
-    with sqlite3.connect(DB_FILE) as conn:
-        cursor = conn.execute("""
+    with engine.connect() as conn:
+        hasil = conn.execute(text("""
             SELECT COUNT(*) FROM pr
-            WHERE mata_pelajaran = ? AND judul_pr = ? AND tanggal_pengumpulan = ?
+            WHERE mata_pelajaran = :mapel AND judul_pr = :judul AND tanggal_pengumpulan = :tgl
             AND status = 'aktif'
-        """, (mapel, judul, str(tanggal_pengumpulan)))
-        return cursor.fetchone()[0] > 0
+        """), {"mapel": mapel, "judul": judul, "tgl": str(tanggal_pengumpulan)}).scalar()
+        return hasil > 0
 
 def save_pr(new_pr):
-    with sqlite3.connect(DB_FILE) as conn:
+    with engine.begin() as conn:
         new_pr.to_sql('pr', conn, if_exists='append', index=False)
 
 
 def arsipkan_pr(pr_id):
     """Ubah status PR menjadi selesai"""
-    with sqlite3.connect(DB_FILE) as conn:
-        conn.execute(
-            "UPDATE pr SET status = 'selesai' WHERE id = ?",
-            (pr_id,)
-        )
+    with engine.begin() as conn:
+        conn.execute(text("UPDATE pr SET status = 'selesai' WHERE id = :id"), {"id": pr_id})
 
 
 def hapus_permanen(pr_id):
     """Hapus PR selamanya dari database"""
-    with sqlite3.connect(DB_FILE) as conn:
-        conn.execute(
-            "DELETE FROM pr WHERE id = ?",
-            (pr_id,)
-        )
+    with engine.begin() as conn:
+        conn.execute(text("DELETE FROM pr WHERE id = :id"), {"id": pr_id})
 
 
 def batalkan_selesai(pr_id):
     """Kembalikan status dari 'selesai' menjadi 'aktif' lagi"""
-    with sqlite3.connect(DB_FILE) as conn:
-        conn.execute(
-            "UPDATE pr SET status = 'aktif' WHERE id = ?",
-            (pr_id,)
-        )
+    with engine.begin() as conn:
+        conn.execute(text("UPDATE pr SET status = 'aktif' WHERE id = :id"), {"id": pr_id})
+
 init_db()
 seed_jadwal()
 
