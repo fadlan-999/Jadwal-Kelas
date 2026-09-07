@@ -117,6 +117,9 @@ h1 {
 st.markdown("<h1>✦ Kelas 9D</h1>", unsafe_allow_html=True)
 st.markdown("<p class='subtitle'>Modern Classroom Management • Tahun Pelajaran 2026/2027</p>", unsafe_allow_html=True)
 
+# ====================== KONSTANTA ======================
+ADMIN_ACCOUNTS = ["FADLAN"]
+
 daftar_siswa = ["Pilih Nama Kamu...", "AFIQAH", "AISYAH", "ALIF", "ALIFAH", "ALYA", "ANISA",
                 "AZZAM", "AZZIZAH", "CAHAYA", "DYAH", "DZAKKI", "EIJI", "FADLAN", "FAIZ",
                 "FAKHRI", "FARAND", "FATIH", "HABIB", "HAIKAL", "JIBRIL", "KEANDRA", "KEJORA",
@@ -154,6 +157,7 @@ def status_deadline(tanggal_pengumpulan):
     else:
         return f"🟢 {selisih} hari lagi"
 
+# ====================== DATABASE ======================
 @st.cache_resource
 def get_engine():
     db_url = st.secrets["SUPABASE_DB_URL"]
@@ -273,7 +277,10 @@ if not st.session_state.sudah_login:
             st.rerun()
     st.stop()
 
-st.success(f"Selamat datang kembali, **{st.session_state.user_aktif}** 👋")
+user_aktif = st.session_state.user_aktif
+is_admin = user_aktif in ADMIN_ACCOUNTS
+
+st.success(f"Selamat datang kembali, **{user_aktif}** {'👑 Admin' if is_admin else '👋'}")
 if st.button("Ganti Akun", key="btn_ganti_akun"):
     st.session_state.sudah_login = False
     st.session_state.user_aktif = ""
@@ -301,6 +308,7 @@ st.divider()
 
 tab1, tab2, tab3 = st.tabs(["📅 Jadwal Pelajaran", "📝 Input PR", "📜 Riwayat PR"])
 
+# ====================== TAB 1: JADWAL ======================
 with tab1:
     st.markdown("### 📅 Jadwal Pelajaran Kelas 9D")
     st.info("**Jam Sekolah**\nSenin–Rabu: 06.40–15.10 | Kamis: 06.40–14.30 | Jumat: 06.40–11.20")
@@ -311,6 +319,7 @@ with tab1:
             st.markdown(f"**🗓 {hari}**")
             st.dataframe(jadwal_hari[['jam', 'mata_pelajaran', 'guru']], use_container_width=True, hide_index=True)
 
+# ====================== TAB 2: INPUT PR ======================
 with tab2:
     st.markdown("### 📝 Input PR & Tugas")
     with st.form("pr_form"):
@@ -332,7 +341,7 @@ with tab2:
                         "hari": hari, "mata_pelajaran": mapel, "judul_pr": judul,
                         "tanggal_pengumpulan": str(tanggal_pengumpulan), "catatan": catatan,
                         "tanggal_input": datetime.now().strftime("%Y-%m-%d"),
-                        "input_oleh": st.session_state.user_aktif,
+                        "input_oleh": user_aktif,
                         "status": "aktif"
                     }
                     save_pr(pd.DataFrame([data]))
@@ -345,9 +354,10 @@ with tab2:
     if not df_pr.empty:
         st.markdown("### PR Aktif")
         st.caption("Diurutkan berdasarkan tanggal pengumpulan terdekat")
-        # FIX: enumerate untuk key unik per row
         for idx, (_, row) in enumerate(df_pr.iterrows()):
             status = status_deadline(row['tanggal_pengumpulan'])
+            # Admin atau pemilik PR bisa selesaikan
+            boleh_selesaikan = (row['input_oleh'] == user_aktif) or is_admin
             with st.container(border=True):
                 col1, col2 = st.columns([6, 2])
                 with col1:
@@ -356,8 +366,7 @@ with tab2:
                     if row['catatan']:
                         st.write(row['catatan'])
                 with col2:
-                    if row['input_oleh'] == st.session_state.user_aktif:
-                        # FIX: key pakai idx bukan hanya id
+                    if boleh_selesaikan:
                         if st.button("✅ Selesaikan", key=f"selesai_tab2_{row['id']}_{idx}"):
                             arsipkan_pr(row['id'])
                             st.success("PR ditandai selesai!")
@@ -365,9 +374,13 @@ with tab2:
     else:
         st.info("Tidak ada PR aktif saat ini.")
 
+# ====================== TAB 3: RIWAYAT ======================
 with tab3:
     st.markdown("### 📜 Riwayat PR")
     st.caption("Menampilkan SEMUA PR yang pernah dimasukkan, termasuk yang sudah selesai")
+
+    if is_admin:
+        st.info("👑 Kamu login sebagai **Admin** — bisa kelola semua PR.")
 
     df_riwayat = load_semua_pr()
     if df_riwayat.empty:
@@ -390,11 +403,11 @@ with tab3:
                 for mapel_idx, mapel_name in enumerate(sorted(df_bulan['mata_pelajaran'].unique())):
                     df_mapel = df_bulan[df_bulan['mata_pelajaran'] == mapel_name]
                     st.markdown(f"**{mapel_name}** ({len(df_mapel)} tugas)")
-                    # FIX: enumerate row dalam df_mapel untuk key unik absolut
                     for row_idx, (_, row) in enumerate(df_mapel.iterrows()):
                         status_badge = "✅ Selesai" if row['status'] == 'selesai' else "🟢 Aktif"
-                        # Key unik: kombinasi bulan_idx + mapel_idx + row_idx + id
                         unique_suffix = f"{bulan_idx}_{mapel_idx}_{row_idx}_{row['id']}"
+                        # Admin bisa aksi semua PR, siswa hanya PR sendiri
+                        boleh_aksi = (row['input_oleh'] == user_aktif) or is_admin
                         with st.container(border=True):
                             col1, col2, col3 = st.columns([5, 1.5, 1.5])
                             with col1:
@@ -404,14 +417,13 @@ with tab3:
                                     st.write(row['catatan'])
                             with col2:
                                 st.caption(status_badge)
-                                if row['status'] == 'selesai' and row['input_oleh'] == st.session_state.user_aktif:
-                                    # FIX: key unik absolut, tidak crash walau id sama
+                                if row['status'] == 'selesai' and boleh_aksi:
                                     if st.button("↩️ Batalkan", key=f"batal_{unique_suffix}"):
                                         batalkan_selesai(row['id'])
                                         st.success("Dikembalikan ke PR Aktif!")
                                         st.rerun()
                             with col3:
-                                if row['input_oleh'] == st.session_state.user_aktif:
+                                if boleh_aksi:
                                     if st.button("🗑️ Hapus", key=f"hapus_{unique_suffix}"):
                                         hapus_permanen(row['id'])
                                         st.success("PR dihapus permanen!")
