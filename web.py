@@ -266,27 +266,66 @@ setup_database()
 if "sudah_login" not in st.session_state:
     st.session_state.sudah_login = False
     st.session_state.user_aktif = ""
+    st.session_state.is_admin = False
 
 if not st.session_state.sudah_login:
+
     st.markdown("### Silakan verifikasi identitasmu")
-    nama = st.selectbox("", daftar_siswa, label_visibility="collapsed")
-    if st.button("Masuk ke Kelas 9D", type="primary", use_container_width=True):
-        if nama != "Pilih Nama Kamu...":
+
+    nama = st.selectbox(
+        "Pilih nama",
+        daftar_siswa,
+        label_visibility="collapsed"
+    )
+
+    # ================= ADMIN =================
+    if nama == "FADLAN":
+        password = st.text_input(
+            "🔐 Password Admin",
+            type="password",
+            placeholder="Masukkan password admin"
+        )
+
+        if st.button(
+            "👑 Masuk sebagai Admin",
+            type="primary",
+            use_container_width=True
+        ):
+            admin_password = st.secrets.get("ADMIN_PASSWORD", "")
+
+            if not admin_password:
+                st.error("⚠️ Password admin belum dikonfigurasi di Secrets.")
+                st.stop()
+
+            if password == admin_password:
+                st.session_state.sudah_login = True
+                st.session_state.user_aktif = "FADLAN"
+                st.session_state.is_admin = True
+                st.rerun()
+            else:
+                st.error("❌ Password admin salah!")
+
+    # ================= SISWA BIASA =================
+    elif nama != "Pilih Nama Kamu...":
+
+        if st.button(
+            "Masuk ke Kelas 9D",
+            type="primary",
+            use_container_width=True
+        ):
             st.session_state.sudah_login = True
             st.session_state.user_aktif = nama
+            st.session_state.is_admin = False
             st.rerun()
+
+    else:
+        st.info("Silakan pilih nama terlebih dahulu.")
+
     st.stop()
 
+# ================= DATA LOGIN =================
 user_aktif = st.session_state.user_aktif
-is_admin = user_aktif in ADMIN_ACCOUNTS
-
-st.success(f"Selamat datang kembali, **{user_aktif}** {'👑 Admin' if is_admin else '👋'}")
-if st.button("Ganti Akun", key="btn_ganti_akun"):
-    st.session_state.sudah_login = False
-    st.session_state.user_aktif = ""
-    st.rerun()
-
-st.divider()
+is_admin = st.session_state.is_admin
 
 # ====================== DASHBOARD ======================
 df_semua = load_semua_pr()
