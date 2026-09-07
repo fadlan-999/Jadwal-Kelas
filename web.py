@@ -5,7 +5,6 @@ from sqlalchemy import create_engine, text
 
 st.set_page_config(page_title="Kelas 9D", layout="wide", initial_sidebar_state="collapsed")
 
-# ====================== CSS (tema "Nuansa" - biru monokrom gelap, kaca) ======================
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
@@ -59,7 +58,6 @@ h1 {
 }
 .subtitle {color: var(--c-400); font-size: 1.02rem; font-family: 'JetBrains Mono', monospace;}
 
-/* Kartu (container dengan border, dipakai untuk item PR) */
 [data-testid="stVerticalBlockBorderWrapper"]:has(> div > [data-testid="stVerticalBlock"]) {
     background: linear-gradient(180deg, hsla(var(--h),40%,16%,.55), hsla(var(--h),42%,9%,.65));
     border: 1px solid var(--line-strong) !important;
@@ -67,7 +65,6 @@ h1 {
     backdrop-filter: blur(16px);
 }
 
-/* Metric (Total PR, PR Aktif, Selesai) */
 [data-testid="stMetric"] {
     background: linear-gradient(180deg, hsla(var(--h),40%,16%,.55), hsla(var(--h),42%,9%,.65));
     border: 1px solid var(--line-strong);
@@ -77,7 +74,6 @@ h1 {
 }
 [data-testid="stMetricValue"] { color: var(--c-100); font-family: 'JetBrains Mono', monospace; }
 
-/* Tab */
 .stTabs [data-baseweb="tab-list"] {
     background: hsla(var(--h),45%,5%,.55);
     border: 1px solid var(--line);
@@ -102,7 +98,6 @@ h1 {
     background-color: transparent !important;
 }
 
-/* Tombol */
 .stButton button, .stFormSubmitButton button {
     background: linear-gradient(135deg, var(--c-300), var(--accent)) !important;
     color: var(--c-950) !important;
@@ -111,7 +106,6 @@ h1 {
     font-weight: 700 !important;
 }
 
-/* Expander (Riwayat PR per bulan) */
 [data-testid="stExpander"] {
     background: hsla(var(--h),40%,12%,.4);
     border: 1px solid var(--line-strong);
@@ -123,10 +117,10 @@ h1 {
 st.markdown("<h1>✦ Kelas 9D</h1>", unsafe_allow_html=True)
 st.markdown("<p class='subtitle'>Modern Classroom Management • Tahun Pelajaran 2026/2027</p>", unsafe_allow_html=True)
 
-daftar_siswa = ["Pilih Nama Kamu...", "AFIQAH", "AISYAH", "ALIF", "ALIFAH", "ALYA", "ANISA", 
-                "AZZAM", "AZZIZAH", "CAHAYA", "DYAH", "DZAKKI", "EIJI", "FADLAN", "FAIZ", 
-                "FAKHRI", "FARAND", "FATIH", "HABIB", "HAIKAL", "JIBRIL", "KEANDRA", "KEJORA", 
-                "KEYLA", "MASUD", "NABILA", "NADHIF MUZAKI", "NADHIF RAZA", "NINDITA", 
+daftar_siswa = ["Pilih Nama Kamu...", "AFIQAH", "AISYAH", "ALIF", "ALIFAH", "ALYA", "ANISA",
+                "AZZAM", "AZZIZAH", "CAHAYA", "DYAH", "DZAKKI", "EIJI", "FADLAN", "FAIZ",
+                "FAKHRI", "FARAND", "FATIH", "HABIB", "HAIKAL", "JIBRIL", "KEANDRA", "KEJORA",
+                "KEYLA", "MASUD", "NABILA", "NADHIF MUZAKI", "NADHIF RAZA", "NINDITA",
                 "NINDYA", "RAFA BB", "RAIS", "RAKA", "RIFQA", "SHAQUILLA", "SHOFI", "ZILAN"]
 
 daftar_mapel = [
@@ -148,11 +142,9 @@ def format_bulan_indo(tanggal_dt):
     return f"{BULAN_INDO.get(bulan_en, bulan_en)} {tahun}"
 
 def status_deadline(tanggal_pengumpulan):
-    """Saran #5: Status deadline dengan warna"""
     deadline = pd.to_datetime(tanggal_pengumpulan).date()
     hari_ini = date.today()
     selisih = (deadline - hari_ini).days
-    
     if selisih < 0:
         return "🔴 Terlambat"
     elif selisih == 0:
@@ -162,13 +154,8 @@ def status_deadline(tanggal_pengumpulan):
     else:
         return f"🟢 {selisih} hari lagi"
 
-# ====================== DATABASE (Supabase Postgres - persisten, tidak hilang saat app restart) ======================
 @st.cache_resource
 def get_engine():
-    """
-    Koneksi ke Supabase Postgres. Butuh SUPABASE_DB_URL
-    di Streamlit Cloud > Settings > Secrets.
-    """
     db_url = st.secrets["SUPABASE_DB_URL"]
     return create_engine(db_url, pool_pre_ping=True)
 
@@ -176,10 +163,10 @@ engine = get_engine()
 
 def init_db():
     with engine.begin() as conn:
-        conn.execute(text('''CREATE TABLE IF NOT EXISTS jadwal 
+        conn.execute(text('''CREATE TABLE IF NOT EXISTS jadwal
                         (id SERIAL PRIMARY KEY, hari TEXT, jam TEXT, mata_pelajaran TEXT, guru TEXT)'''))
-        conn.execute(text('''CREATE TABLE IF NOT EXISTS pr 
-                        (id SERIAL PRIMARY KEY, hari TEXT, tanggal_input TEXT, mata_pelajaran TEXT, 
+        conn.execute(text('''CREATE TABLE IF NOT EXISTS pr
+                        (id SERIAL PRIMARY KEY, hari TEXT, tanggal_input TEXT, mata_pelajaran TEXT,
                          judul_pr TEXT, tanggal_pengumpulan TEXT, catatan TEXT, input_oleh TEXT,
                          status TEXT DEFAULT 'aktif')'''))
         columns = [row[0] for row in conn.execute(text(
@@ -227,11 +214,10 @@ def load_jadwal():
         return pd.read_sql(text("SELECT * FROM jadwal"), conn)
 
 def load_pr_aktif():
-    """Saran #6: Diurutkan berdasarkan tanggal_pengumpulan (deadline terdekat di atas)"""
     with engine.connect() as conn:
         return pd.read_sql(text("""
-            SELECT * FROM pr 
-            WHERE status = 'aktif' 
+            SELECT * FROM pr
+            WHERE status = 'aktif'
             ORDER BY tanggal_pengumpulan ASC
         """), conn)
 
@@ -240,7 +226,6 @@ def load_semua_pr():
         return pd.read_sql(text("SELECT * FROM pr ORDER BY tanggal_input DESC"), conn)
 
 def pr_sudah_ada(mapel, judul, tanggal_pengumpulan):
-    """Saran #7: Cek duplikasi PR"""
     with engine.connect() as conn:
         hasil = conn.execute(text("""
             SELECT COUNT(*) FROM pr
@@ -253,21 +238,15 @@ def save_pr(new_pr):
     with engine.begin() as conn:
         new_pr.to_sql('pr', conn, if_exists='append', index=False)
 
-
 def arsipkan_pr(pr_id):
-    """Ubah status PR menjadi selesai"""
     with engine.begin() as conn:
         conn.execute(text("UPDATE pr SET status = 'selesai' WHERE id = :id"), {"id": pr_id})
 
-
 def hapus_permanen(pr_id):
-    """Hapus PR selamanya dari database"""
     with engine.begin() as conn:
         conn.execute(text("DELETE FROM pr WHERE id = :id"), {"id": pr_id})
 
-
 def batalkan_selesai(pr_id):
-    """Kembalikan status dari 'selesai' menjadi 'aktif' lagi"""
     with engine.begin() as conn:
         conn.execute(text("UPDATE pr SET status = 'aktif' WHERE id = :id"), {"id": pr_id})
 
@@ -295,14 +274,14 @@ if not st.session_state.sudah_login:
     st.stop()
 
 st.success(f"Selamat datang kembali, **{st.session_state.user_aktif}** 👋")
-if st.button("Ganti Akun"):
+if st.button("Ganti Akun", key="btn_ganti_akun"):
     st.session_state.sudah_login = False
     st.session_state.user_aktif = ""
     st.rerun()
 
 st.divider()
 
-# ====================== DASHBOARD (Saran #9) ======================
+# ====================== DASHBOARD ======================
 df_semua = load_semua_pr()
 df_aktif_count = load_pr_aktif()
 
@@ -347,7 +326,7 @@ with tab2:
         if st.form_submit_button("Simpan PR", use_container_width=True):
             if mapel and judul and str(mapel).strip() != "":
                 if pr_sudah_ada(mapel, judul, tanggal_pengumpulan):
-                    st.error("❌ PR ini sudah pernah dimasukkan! (Mata Pelajaran, Judul, dan Tanggal Pengumpulan sama). Tidak disimpan lagi.")
+                    st.error("❌ PR ini sudah pernah dimasukkan! Tidak disimpan lagi.")
                 else:
                     data = {
                         "hari": hari, "mata_pelajaran": mapel, "judul_pr": judul,
@@ -366,7 +345,8 @@ with tab2:
     if not df_pr.empty:
         st.markdown("### PR Aktif")
         st.caption("Diurutkan berdasarkan tanggal pengumpulan terdekat")
-        for _, row in df_pr.iterrows():
+        # FIX: enumerate untuk key unik per row
+        for idx, (_, row) in enumerate(df_pr.iterrows()):
             status = status_deadline(row['tanggal_pengumpulan'])
             with st.container(border=True):
                 col1, col2 = st.columns([6, 2])
@@ -377,7 +357,8 @@ with tab2:
                         st.write(row['catatan'])
                 with col2:
                     if row['input_oleh'] == st.session_state.user_aktif:
-                        if st.button("✅ Selesaikan", key=f"selesai_{row['id']}"):
+                        # FIX: key pakai idx bukan hanya id
+                        if st.button("✅ Selesaikan", key=f"selesai_tab2_{row['id']}_{idx}"):
                             arsipkan_pr(row['id'])
                             st.success("PR ditandai selesai!")
                             st.rerun()
@@ -387,7 +368,7 @@ with tab2:
 with tab3:
     st.markdown("### 📜 Riwayat PR")
     st.caption("Menampilkan SEMUA PR yang pernah dimasukkan, termasuk yang sudah selesai")
-    
+
     df_riwayat = load_semua_pr()
     if df_riwayat.empty:
         st.info("Belum ada data riwayat PR.")
@@ -395,17 +376,25 @@ with tab3:
         df_riwayat['tanggal_input_dt'] = pd.to_datetime(df_riwayat['tanggal_input'])
         df_riwayat['bulan'] = df_riwayat['tanggal_input_dt'].apply(format_bulan_indo)
         df_riwayat = df_riwayat.sort_values(by='tanggal_input_dt', ascending=False)
-        
-        bulan_unik = df_riwayat[['bulan', 'tanggal_input_dt']].drop_duplicates().sort_values('tanggal_input_dt', ascending=False)['bulan'].tolist()
-        
-        for bulan in bulan_unik:
+
+        bulan_unik = (
+            df_riwayat[['bulan', 'tanggal_input_dt']]
+            .drop_duplicates()
+            .sort_values('tanggal_input_dt', ascending=False)['bulan']
+            .tolist()
+        )
+
+        for bulan_idx, bulan in enumerate(bulan_unik):
             df_bulan = df_riwayat[df_riwayat['bulan'] == bulan]
             with st.expander(f"📅 {bulan} ({len(df_bulan)} PR)", expanded=True):
-                for mapel_name in sorted(df_bulan['mata_pelajaran'].unique()):
+                for mapel_idx, mapel_name in enumerate(sorted(df_bulan['mata_pelajaran'].unique())):
                     df_mapel = df_bulan[df_bulan['mata_pelajaran'] == mapel_name]
                     st.markdown(f"**{mapel_name}** ({len(df_mapel)} tugas)")
-                    for _, row in df_mapel.iterrows():
+                    # FIX: enumerate row dalam df_mapel untuk key unik absolut
+                    for row_idx, (_, row) in enumerate(df_mapel.iterrows()):
                         status_badge = "✅ Selesai" if row['status'] == 'selesai' else "🟢 Aktif"
+                        # Key unik: kombinasi bulan_idx + mapel_idx + row_idx + id
+                        unique_suffix = f"{bulan_idx}_{mapel_idx}_{row_idx}_{row['id']}"
                         with st.container(border=True):
                             col1, col2, col3 = st.columns([5, 1.5, 1.5])
                             with col1:
@@ -415,16 +404,15 @@ with tab3:
                                     st.write(row['catatan'])
                             with col2:
                                 st.caption(status_badge)
-                                # Tombol batalkan hanya muncul kalau status = selesai dan milik user tsb
                                 if row['status'] == 'selesai' and row['input_oleh'] == st.session_state.user_aktif:
-                                    if st.button("↩️ Batalkan", key=f"batal_{row['id']}"):
+                                    # FIX: key unik absolut, tidak crash walau id sama
+                                    if st.button("↩️ Batalkan", key=f"batal_{unique_suffix}"):
                                         batalkan_selesai(row['id'])
                                         st.success("Dikembalikan ke PR Aktif!")
                                         st.rerun()
                             with col3:
-                                # Tombol hapus permanen, hanya untuk yang punya PR itu
                                 if row['input_oleh'] == st.session_state.user_aktif:
-                                    if st.button("🗑️ Hapus", key=f"hapus_{row['id']}"):
+                                    if st.button("🗑️ Hapus", key=f"hapus_{unique_suffix}"):
                                         hapus_permanen(row['id'])
                                         st.success("PR dihapus permanen!")
                                         st.rerun()
