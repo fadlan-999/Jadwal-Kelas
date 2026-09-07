@@ -263,23 +263,34 @@ def setup_database():
 setup_database()
 
 # ====================== LOGIN ======================
+
+# Pastikan setiap session_state selalu tersedia
 if "sudah_login" not in st.session_state:
     st.session_state.sudah_login = False
+
+if "user_aktif" not in st.session_state:
     st.session_state.user_aktif = ""
+
+if "is_admin" not in st.session_state:
     st.session_state.is_admin = False
 
+
+# ====================== HALAMAN LOGIN ======================
 if not st.session_state.sudah_login:
 
     st.markdown("### Silakan verifikasi identitasmu")
 
     nama = st.selectbox(
-        "Pilih nama",
+        "Pilih nama kamu",
         daftar_siswa,
         label_visibility="collapsed"
     )
 
-    # ================= ADMIN =================
+    # ==================================================
+    # FADLAN = ADMIN → WAJIB PASSWORD
+    # ==================================================
     if nama == "FADLAN":
+
         password = st.text_input(
             "🔐 Password Admin",
             type="password",
@@ -291,21 +302,32 @@ if not st.session_state.sudah_login:
             type="primary",
             use_container_width=True
         ):
-            admin_password = st.secrets.get("ADMIN_PASSWORD", "")
+
+            admin_password = st.secrets.get(
+                "ADMIN_PASSWORD",
+                ""
+            )
 
             if not admin_password:
-                st.error("⚠️ Password admin belum dikonfigurasi di Secrets.")
-                st.stop()
+                st.error(
+                    "⚠️ Password admin belum diatur di Streamlit Secrets."
+                )
 
-            if password == admin_password:
+            elif password == admin_password:
+
                 st.session_state.sudah_login = True
                 st.session_state.user_aktif = "FADLAN"
                 st.session_state.is_admin = True
+
                 st.rerun()
+
             else:
                 st.error("❌ Password admin salah!")
 
-    # ================= SISWA BIASA =================
+
+    # ==================================================
+    # SISWA BIASA → TANPA PASSWORD
+    # ==================================================
     elif nama != "Pilih Nama Kamu...":
 
         if st.button(
@@ -313,9 +335,11 @@ if not st.session_state.sudah_login:
             type="primary",
             use_container_width=True
         ):
+
             st.session_state.sudah_login = True
             st.session_state.user_aktif = nama
             st.session_state.is_admin = False
+
             st.rerun()
 
     else:
@@ -323,7 +347,9 @@ if not st.session_state.sudah_login:
 
     st.stop()
 
-# ================= DATA LOGIN =================
+
+# ====================== DATA LOGIN ======================
+
 user_aktif = st.session_state.user_aktif
 is_admin = st.session_state.is_admin
 
