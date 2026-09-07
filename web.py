@@ -383,51 +383,159 @@ with tab3:
         st.info("👑 Kamu login sebagai **Admin** — bisa kelola semua PR.")
 
     df_riwayat = load_semua_pr()
+
     if df_riwayat.empty:
         st.info("Belum ada data riwayat PR.")
-    else:
-        df_riwayat['tanggal_input_dt'] = pd.to_datetime(df_riwayat['tanggal_input'])
-        df_riwayat['bulan'] = df_riwayat['tanggal_input_dt'].apply(format_bulan_indo)
-        df_riwayat = df_riwayat.sort_values(by='tanggal_input_dt', ascending=False)
 
+    else:
+        # Ubah tanggal input menjadi datetime
+        df_riwayat['tanggal_input_dt'] = pd.to_datetime(
+            df_riwayat['tanggal_input']
+        )
+
+        # Tambahkan nama bulan Indonesia
+        df_riwayat['bulan'] = df_riwayat[
+            'tanggal_input_dt'
+        ].apply(format_bulan_indo)
+
+        # Urutkan berdasarkan tanggal terbaru
+        df_riwayat = df_riwayat.sort_values(
+            by='tanggal_input_dt',
+            ascending=False
+        )
+
+        # Ambil setiap bulan HANYA SATU KALI
         bulan_unik = (
-            df_riwayat[['bulan', 'tanggal_input_dt']]
-            .drop_duplicates()
-            .sort_values('tanggal_input_dt', ascending=False)['bulan']
+            df_riwayat
+            .drop_duplicates(subset=['bulan'])
+            ['bulan']
             .tolist()
         )
 
+        # ================= TAMPILKAN PER BULAN =================
         for bulan_idx, bulan in enumerate(bulan_unik):
-            df_bulan = df_riwayat[df_riwayat['bulan'] == bulan]
-            with st.expander(f"📅 {bulan} ({len(df_bulan)} PR)", expanded=True):
-                for mapel_idx, mapel_name in enumerate(sorted(df_bulan['mata_pelajaran'].unique())):
-                    df_mapel = df_bulan[df_bulan['mata_pelajaran'] == mapel_name]
-                    st.markdown(f"**{mapel_name}** ({len(df_mapel)} tugas)")
-                    for row_idx, (_, row) in enumerate(df_mapel.iterrows()):
-                        status_badge = "✅ Selesai" if row['status'] == 'selesai' else "🟢 Aktif"
-                        unique_suffix = f"{bulan_idx}_{mapel_idx}_{row_idx}_{row['id']}"
-                        # Admin bisa aksi semua PR, siswa hanya PR sendiri
-                        boleh_aksi = (row['input_oleh'] == user_aktif) or is_admin
+
+            # Ambil semua PR pada bulan tersebut
+            df_bulan = df_riwayat[
+                df_riwayat['bulan'] == bulan
+            ]
+
+            with st.expander(
+                f"📅 {bulan} ({len(df_bulan)} PR)",
+                expanded=True
+            ):
+
+                # Kelompokkan berdasarkan mata pelajaran
+                daftar_mapel_bulan = sorted(
+                    df_bulan['mata_pelajaran'].unique()
+                )
+
+                for mapel_idx, mapel_name in enumerate(
+                    daftar_mapel_bulan
+                ):
+
+                    df_mapel = df_bulan[
+                        df_bulan['mata_pelajaran'] == mapel_name
+                    ]
+
+                    st.markdown(
+                        f"**{mapel_name}** ({len(df_mapel)} tugas)"
+                    )
+
+                    # ================= TAMPILKAN PR =================
+                    for row_idx, (_, row) in enumerate(
+                        df_mapel.iterrows()
+                    ):
+
+                        # Status PR
+                        status_badge = (
+                            "✅ Selesai"
+                            if row['status'] == 'selesai'
+                            else "🟢 Aktif"
+                        )
+
+                        # Key unik untuk tombol Streamlit
+                        unique_suffix = (
+                            f"{bulan_idx}_"
+                            f"{mapel_idx}_"
+                            f"{row_idx}_"
+                            f"{row['id']}"
+                        )
+
+                        # Admin bisa semua PR
+                        # Siswa hanya bisa PR miliknya
+                        boleh_aksi = (
+                            row['input_oleh'] == user_aktif
+                            or is_admin
+                        )
+
                         with st.container(border=True):
-                            col1, col2, col3 = st.columns([5, 1.5, 1.5])
+
+                            col1, col2, col3 = st.columns(
+                                [5, 1.5, 1.5]
+                            )
+
+                            # ================= INFO PR =================
                             with col1:
-                                st.write(f"**{row['hari']}** — {row['judul_pr']}")
-                                st.caption(f"Pengumpulan: **{row['tanggal_pengumpulan']}** | Oleh: {row['input_oleh']}")
+
+                                st.write(
+                                    f"**{row['hari']}** — "
+                                    f"{row['judul_pr']}"
+                                )
+
+                                st.caption(
+                                    f"Pengumpulan: "
+                                    f"**{row['tanggal_pengumpulan']}** "
+                                    f"| Oleh: "
+                                    f"**{row['input_oleh']}**"
+                                )
+
                                 if row['catatan']:
                                     st.write(row['catatan'])
-                            with col2:
-                                st.caption(status_badge)
-                                if row['status'] == 'selesai' and boleh_aksi:
-                                    if st.button("↩️ Batalkan", key=f"batal_{unique_suffix}"):
-                                        batalkan_selesai(row['id'])
-                                        st.success("Dikembalikan ke PR Aktif!")
-                                        st.rerun()
-                            with col3:
-                                if boleh_aksi:
-                                    if st.button("🗑️ Hapus", key=f"hapus_{unique_suffix}"):
-                                        hapus_permanen(row['id'])
-                                        st.success("PR dihapus permanen!")
-                                        st.rerun()
-                    st.markdown("---")
 
-st.caption("--- Kelas 9D")
+                            # ================= STATUS =================
+                            with col2:
+
+                                st.caption(status_badge)
+
+                                if (
+                                    row['status'] == 'selesai'
+                                    and boleh_aksi
+                                ):
+
+                                    if st.button(
+                                        "↩️ Batalkan",
+                                        key=f"batal_{unique_suffix}"
+                                    ):
+
+                                        batalkan_selesai(
+                                            row['id']
+                                        )
+
+                                        st.success(
+                                            "Dikembalikan ke PR Aktif!"
+                                        )
+
+                                        st.rerun()
+
+                            # ================= HAPUS =================
+                            with col3:
+
+                                if boleh_aksi:
+
+                                    if st.button(
+                                        "🗑️ Hapus",
+                                        key=f"hapus_{unique_suffix}"
+                                    ):
+
+                                        hapus_permanen(
+                                            row['id']
+                                        )
+
+                                        st.success(
+                                            "PR dihapus permanen!"
+                                        )
+
+                                        st.rerun()
+
+                    st.markdown("---")
